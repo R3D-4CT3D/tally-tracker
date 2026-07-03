@@ -1,0 +1,9 @@
+{
+  "name": "run-tally-skill",
+  "private": true,
+  "type": "module",
+  "description": "Playwright driver deps for the run-tally skill -- not part of the product build.",
+  "dependencies": {
+    "playwright": "1.61.1"
+  }
+}
