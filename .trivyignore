@@ -1,0 +1,39 @@
+# Documented Trivy exceptions for backend/Dockerfile (tally-api).
+#
+# All entries below are Debian OS packages pulled in transitively by
+# python:3.12-slim-bookworm that our FastAPI app never invokes. Each is either
+# marked will_not_fix or fix_deferred upstream (Debian has no patch to apply),
+# and the vulnerable code path is not reachable from this application. See
+# docs/adr/0003-trivy-exceptions.md for the fuller rationale and the plan to
+# revisit this (e.g. a distroless base image) once it can be verified against
+# a real Docker build.
+
+# zlib: integer overflow in zipOpenNewFileInZip4_6 (minizip). Debian: will_not_fix.
+# We never call minizip; zlib is only used transitively via Python's stdlib zlib module.
+CVE-2023-45853
+
+# perl-base / perl-Archive-Tar / perl-IO-Compress: path traversal, DoS, arbitrary
+# file access via crafted tar archives. Debian: fix_deferred. perl-base ships as
+# part of Debian's essential package set but is never invoked by this application
+# (no perl scripts, no tar extraction via perl).
+CVE-2026-42496
+CVE-2026-42497
+CVE-2026-48962
+CVE-2026-9538
+CVE-2026-8376
+
+# gzip: buffer overflow in the LZH decompression path. The gzip binary is never
+# invoked by this application (Caddy/uvicorn handle any compression needed).
+CVE-2026-41992
+
+# libacl1: symlink traversal privilege escalation via libacl functions. Not
+# called by this application.
+CVE-2026-54369
+
+# ncurses (libncursesw6, libtinfo6, ncurses-base, ncurses-bin): buffer overflow.
+# No interactive terminal use inside the container.
+CVE-2025-69720
+
+# libsqlite3-0: integer overflow. Python's sqlite3 stdlib module is never used
+# by this application — all persistence goes through Postgres/SQLAlchemy.
+CVE-2025-7458
