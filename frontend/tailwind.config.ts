@@ -4,7 +4,9 @@ import type { Config } from "tailwindcss";
 // linen light mode) and full type scale land in M5's design-system milestone.
 // This file is deliberately the *one place* those tokens will live, per spec §3.
 export default {
-  darkMode: "class",
+  // "media" (not "class"): both themes ship from OS preference with zero
+  // toggle UI needed — that infra is M5's job. See M1 frontend ADR.
+  darkMode: "media",
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {

@@ -1,5 +1,45 @@
 {
   "app": {
     "title": "Tally"
+  },
+  "common": {
+    "genericError": "Something went wrong. Please try again."
+  },
+  "setup": {
+    "title": "Set up Tally",
+    "subtitle": "Create your household and owner account to get started.",
+    "householdNameLabel": "Household name",
+    "ownerDisplayNameLabel": "Your name",
+    "ownerEmailLabel": "Email",
+    "ownerPasswordLabel": "Password",
+    "submit": "Create household",
+    "submitting": "Creating…"
+  },
+  "login": {
+    "title": "Welcome back",
+    "subtitle": "Log in to your household.",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "submit": "Log in",
+    "submitting": "Logging in…"
+  },
+  "invite": {
+    "title": "Join a household",
+    "subtitle": "You've been invited to join a household on Tally.",
+    "missingToken": "This invite link looks incomplete. Ask whoever invited you to resend it.",
+    "displayNameLabel": "Your name",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "submit": "Join household",
+    "submitting": "Joining…"
+  },
+  "nav": {
+    "greeting": "Hi, {{name}}",
+    "logout": "Log out"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome, {{name}}",
+    "comingSoon": "Your household's full dashboard is coming soon."
   }
 }
