@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     session_secret: str = "dev-only-insecure-secret-change-me"
 
+    # Separate Redis db index from sessions (db 0) so rate-limit counters and
+    # session data are independently flushable/inspectable.
+    rate_limit_storage_uri: str = "redis://localhost:6379/1"
+
+    session_idle_days: int = 30
+    session_absolute_days: int = 90
+    invite_expiry_days: int = 7
+
     @property
     def docs_enabled(self) -> bool:
         return self.env != "production"

@@ -33,6 +33,9 @@ services:
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET must be set}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      # Separate db index from sessions (0) so rate-limit counters and session
+      # data are independently flushable/inspectable.
+      RATE_LIMIT_STORAGE_URI: redis://:${REDIS_PASSWORD}@redis:6379/1
     depends_on:
       db:
         condition: service_healthy

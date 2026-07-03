@@ -12,6 +12,10 @@ dependencies = [
     "pydantic>=2.9,<3.0",
     "pydantic-settings>=2.5,<3.0",
     "uuid6>=2024.7.10",
+    "argon2-cffi>=23.1,<24.0",
+    "slowapi>=0.1.9,<0.2",
+    "redis>=5.0,<6.0",
+    "email-validator>=2.2,<3.0",
 ]
 
 [dependency-groups]
@@ -22,6 +26,7 @@ dev = [
     "pytest-asyncio>=0.24,<1.0",
     "pytest-cov>=5.0,<6.0",
     "httpx>=0.27,<1.0",
+    "fakeredis>=2.24,<3.0",
 ]
 
 [build-system]
@@ -51,15 +56,27 @@ plugins = ["pydantic.mypy"]
 module = "uuid6.*"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "slowapi.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "fakeredis.*"
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [tool.coverage.run]
 source = ["app/services", "app/jobs"]
+# SQLAlchemy's async engine bridges via greenlet internally; without this,
+# coverage.py's tracer misses statements executed on the greenlet-switched
+# stack (i.e. most of anything that awaits a db.execute()/db.commit()).
+concurrency = ["greenlet"]
 
 [tool.coverage.report]
-# Gate scoped to services/import-pipeline code per spec §7; those packages are
-# still empty in M0, so this is wired but not yet meaningfully enforced (see
-# docs/adr and the M3 milestone where real service logic lands).
-fail_under = 0
+# Gate scoped to services/import-pipeline code per spec §7. M1 (auth/household)
+# is the first milestone with real app/services/ code, so the gate is now
+# meaningfully enforced (see docs/adr/0005).
+fail_under = 80

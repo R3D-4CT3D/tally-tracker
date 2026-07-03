@@ -16,6 +16,8 @@ RUN useradd --create-home --uid 10001 appuser
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/app /app/app
+COPY alembic.ini ./
+COPY alembic ./alembic
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1

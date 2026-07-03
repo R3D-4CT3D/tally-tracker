@@ -6,11 +6,14 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from app.core.config import get_settings
+from app.models import (  # noqa: F401
+    audit_log,
+    household,
+    household_member,
+    invite,
+    user,
+)
 from app.models.base import Base
-
-# Import model modules here as they're added so Base.metadata is fully populated
-# for autogenerate, e.g.:
-#   from app.models import household, user, account  # noqa: F401
 
 config = context.config
 settings = get_settings()
