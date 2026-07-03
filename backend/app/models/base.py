@@ -21,7 +21,7 @@ class Base(DeclarativeBase):
 
 
 class TimestampMixin:
-    """created_at/updated_at columns shared by every table per docs/spec.md §5."""
+    """created_at/updated_at columns shared by every table per docs/TALLY_BUILD_SPEC.md §5."""
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)

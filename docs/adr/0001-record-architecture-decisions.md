@@ -8,7 +8,7 @@ Accepted
 
 Tally is built with an explicit ambition to become a hosted product. Decisions made
 early (session storage, dependency tooling, deployment shape) are expensive to
-reverse once real user data exists. `docs/spec.md` §7 asks for 3-5 short ADRs as
+reverse once real user data exists. `docs/TALLY_BUILD_SPEC.md` §7 asks for 3-5 short ADRs as
 decisions are made.
 
 ## Decision

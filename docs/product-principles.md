@@ -19,7 +19,7 @@ its own sake. Concretely, in this codebase:
   export) behind payment.
 - **No shame mechanics.** A missed week costs a streak freeze, never a guilt message.
   Spending copy is descriptive, never judgmental. See §3.2 (Forgiveness mechanics) and
-  §4.5 (streak freeze copy: "Streak freeze used — we've got you.") in `docs/spec.md`.
+  §4.5 (streak freeze copy: "Streak freeze used — we've got you.") in `docs/TALLY_BUILD_SPEC.md`.
 - **Forgiveness over punishment.** Every mechanic that can "break" (a streak, a budget,
   a grade) has a soft landing built in from the start, not bolted on after users
   complain.

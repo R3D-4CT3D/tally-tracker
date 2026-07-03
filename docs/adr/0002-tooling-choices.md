@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-M0 (repo scaffold & CI, see `docs/spec.md` §8) required picking between several
+M0 (repo scaffold & CI, see `docs/TALLY_BUILD_SPEC.md` §8) required picking between several
 build-time options the spec left open (§10) or offered as either/or (§7).
 
 ## Decision
