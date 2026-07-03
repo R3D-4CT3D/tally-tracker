@@ -1,0 +1,20 @@
+# Documented Trivy exceptions for deploy/Dockerfile.caddy (tally-caddy).
+#
+# Unlike backend/Dockerfile's exceptions (.trivyignore, docs/adr/0003), these
+# are NOT permanent/unreachable-code-path exceptions -- they're a temporary
+# upstream timing gap. Go 1.25.11/1.26.4 (which fix both CVEs below) were
+# released after caddy:2-alpine's last image build (2026-06-24, confirmed via
+# Docker Hub -- no newer caddy image tag exists yet). There is currently no
+# image we can pull or pin to that has the fix. See docs/adr/0004.
+#
+# Action item: remove this file (or the specific CVE lines) once Caddy
+# publishes a new 2-alpine build against a patched Go toolchain, and let
+# Trivy re-verify.
+
+# stdlib crypto/x509: DoS via excessive DNS name constraint processing.
+# Fixed in Go 1.25.11 / 1.26.4; caddy:2-alpine (2026-06-24) still ships 1.26.3.
+CVE-2026-27145
+
+# stdlib mime: DoS via maliciously-crafted MIME header with many invalid
+# encoded words. Same fix versions, same gap.
+CVE-2026-42504
