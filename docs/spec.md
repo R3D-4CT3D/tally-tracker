@@ -280,3 +280,4 @@ Each milestone should end with passing CI, migrations applied cleanly from scrat
 - Exact grade formula for monthly close (ship a v0 formula behind a single tunable function).
 - Final name + logo (Gina). Keep branding in tokens/config.
 - Whether bill "mark paid" auto-creates a transaction or links an imported one (recommend: link-first with quick-create fallback).
+- **Distroless base image for backend/Dockerfile's runtime stage** (e.g. `gcr.io/distroless/base-debian12`/`-nonroot`, copying in the self-contained `uv`-built venv). Would eliminate the Debian OS packages currently carved out via `.trivyignore` (see `docs/adr/0003-trivy-exceptions.md`) — perl, gzip, ncurses, libacl1 — by never installing them at all, rather than just ignoring their CVEs. Deferred at M0 because it couldn't be build/boot-tested without local Docker access; revisit once verifiable (real Docker daemon on the Pi, or Docker Desktop WSL integration enabled locally).
