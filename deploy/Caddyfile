@@ -1,0 +1,25 @@
+{$DOMAIN:localhost} {
+	encode gzip
+
+	# ASVS L1 security headers (spec §7). Nothing here assumes Tailscale — if the
+	# deployment moves behind Tailscale Serve or a Cloudflare Tunnel later, this
+	# file does not need to change (spec §6 portability requirement).
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'"
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
