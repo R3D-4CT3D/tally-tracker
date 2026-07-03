@@ -1,5 +1,9 @@
 # syntax=docker/dockerfile:1
-FROM python:3.12-slim AS builder
+# Pinned to -bookworm (Debian 12) rather than the floating "slim" tag: as of
+# this writing "slim" resolves to Debian 13 "trixie", a newer release still
+# stabilizing its security-patch backports (Trivy found several HIGH/CRITICAL
+# OS CVEs there with no fix yet). Bookworm is the mature, well-patched LTS.
+FROM python:3.12-slim-bookworm AS builder
 RUN pip install --no-cache-dir uv
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
@@ -7,7 +11,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY app ./app
 RUN uv sync --frozen --no-dev
 
-FROM python:3.12-slim AS runtime
+FROM python:3.12-slim-bookworm AS runtime
 RUN useradd --create-home --uid 10001 appuser
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
