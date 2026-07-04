@@ -75,6 +75,49 @@ await step("log back in -> lands on /dashboard again", async () => {
   await shot("04-dashboard-after-login");
 });
 
+await step("create an account", async () => {
+  await page.click('a:has-text("Accounts"), button:has-text("Accounts")').catch(() => {});
+  await page.goto(BASE_URL + "/accounts", { waitUntil: "networkidle" });
+  await page.click('button:has-text("Add account")');
+  await page.fill("#name", "Everyday Checking");
+  await page.selectOption("#type", "checking");
+  await page.fill("#institution", "First National");
+  await page.fill("#balance", "1250.00");
+  await page.fill("#icon", "🏦");
+  await page.click('button:has-text("Create account")');
+  await page.waitForSelector("text=Everyday Checking", { timeout: 15000 });
+  await shot("05-accounts-created");
+});
+
+await step("categories page shows the 13 seeded defaults + a custom one", async () => {
+  await page.goto(BASE_URL + "/categories", { waitUntil: "networkidle" });
+  await page.waitForSelector("text=Housing", { timeout: 15000 });
+  await page.click('button:has-text("Add category")');
+  await page.fill("#name", "Hobbies");
+  await page.fill("#icon", "🎨");
+  await page.click('button:has-text("Create category")');
+  await page.waitForSelector("text=Hobbies", { timeout: 15000 });
+  await shot("06-categories");
+});
+
+await step("add a manual transaction and see it in the filtered list", async () => {
+  await page.goto(BASE_URL + "/transactions", { waitUntil: "networkidle" });
+  await page.click('a:has-text("Add transaction")');
+  await page.selectOption("#account_id", { label: "Everyday Checking" });
+  await page.fill("#amount", "-42.50");
+  await page.fill("#description", "Grocery Run");
+  await page.click('button:has-text("Add transaction")');
+  await page.waitForURL(BASE_URL + "/transactions", { timeout: 15000 });
+  await page.waitForSelector("text=Grocery Run", { timeout: 15000 });
+  await shot("07-transactions-list");
+
+  await page.fill('input[type="search"]', "grocery");
+  await page.waitForSelector("text=Grocery Run", { timeout: 15000 });
+  const noMatchCount = await page.locator("text=No transactions match").count();
+  if (noMatchCount > 0) throw new Error("search filter hid the transaction it should have matched");
+  await shot("08-transactions-search-filtered");
+});
+
 await browser.close();
 
 console.log("\n=== CONSOLE ERRORS ===");

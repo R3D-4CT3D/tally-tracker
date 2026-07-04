@@ -1,7 +1,14 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { useLogoutMutation, useMe } from "../features/auth/hooks";
+
+const NAV_LINKS = [
+  { to: "/dashboard", labelKey: "nav.dashboard" },
+  { to: "/transactions", labelKey: "nav.transactions" },
+  { to: "/accounts", labelKey: "nav.accounts" },
+  { to: "/categories", labelKey: "nav.categories" },
+] as const;
 
 export function AuthenticatedShell() {
   const { t } = useTranslation();
@@ -34,6 +41,23 @@ export function AuthenticatedShell() {
             </span>
           ) : null}
         </div>
+        <nav className="flex items-center gap-4">
+          {NAV_LINKS.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) =>
+                `text-sm font-medium transition-colors ${
+                  isActive
+                    ? "text-ember"
+                    : "text-charcoal/70 hover:text-charcoal dark:text-linen/70 dark:hover:text-linen"
+                }`
+              }
+            >
+              {t(link.labelKey)}
+            </NavLink>
+          ))}
+        </nav>
         <div className="flex items-center gap-4">
           {me.data ? (
             <span className="text-sm">{t("nav.greeting", { name: me.data.display_name })}</span>

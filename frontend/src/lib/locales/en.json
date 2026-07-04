@@ -3,7 +3,12 @@
     "title": "Tally"
   },
   "common": {
-    "genericError": "Something went wrong. Please try again."
+    "genericError": "Something went wrong. Please try again.",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "archive": "Archive",
+    "delete": "Delete",
+    "loading": "Loading…"
   },
   "setup": {
     "title": "Set up Tally",
@@ -35,11 +40,73 @@
   },
   "nav": {
     "greeting": "Hi, {{name}}",
-    "logout": "Log out"
+    "logout": "Log out",
+    "dashboard": "Dashboard",
+    "transactions": "Transactions",
+    "accounts": "Accounts",
+    "categories": "Categories"
   },
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome, {{name}}",
     "comingSoon": "Your household's full dashboard is coming soon."
+  },
+  "accounts": {
+    "title": "Accounts",
+    "addButton": "Add account",
+    "nameLabel": "Name",
+    "typeLabel": "Type",
+    "institutionLabel": "Institution",
+    "balanceLabel": "Balance",
+    "colorLabel": "Color",
+    "iconLabel": "Icon",
+    "createButton": "Create account",
+    "saveButton": "Save changes",
+    "showArchived": "Show archived accounts",
+    "archivedBadge": "Archived",
+    "types": {
+      "checking": "Checking",
+      "savings": "Savings",
+      "credit_card": "Credit card",
+      "loan": "Loan",
+      "cash": "Cash"
+    }
+  },
+  "categories": {
+    "title": "Categories",
+    "addButton": "Add category",
+    "nameLabel": "Name",
+    "parentLabel": "Parent category",
+    "noParent": "None (top-level)",
+    "createButton": "Create category",
+    "saveButton": "Save changes"
+  },
+  "transactions": {
+    "title": "Transactions",
+    "addButton": "Add transaction",
+    "newTitle": "New transaction",
+    "editTitle": "Edit transaction",
+    "dateFromLabel": "From",
+    "dateToLabel": "To",
+    "accountLabel": "Account",
+    "categoryLabel": "Category",
+    "searchLabel": "Search",
+    "searchPlaceholder": "Search descriptions…",
+    "allAccounts": "All accounts",
+    "allCategories": "All categories",
+    "uncategorizedOnly": "Uncategorized",
+    "unknownAccount": "Unknown account",
+    "selectAccount": "Select an account",
+    "dateLabel": "Date",
+    "amountLabel": "Amount",
+    "descriptionLabel": "Description",
+    "noCategory": "No category",
+    "notesLabel": "Notes",
+    "createButton": "Add transaction",
+    "saveButton": "Save changes",
+    "confirmDelete": "Delete this transaction? This cannot be undone.",
+    "empty": "No transactions match these filters.",
+    "previousPage": "Previous",
+    "nextPage": "Next"
   }
 }

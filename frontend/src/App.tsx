@@ -1,10 +1,14 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AuthenticatedShell } from "./components/AuthenticatedShell";
+import { AccountsPage } from "./pages/AccountsPage";
+import { CategoriesPage } from "./pages/CategoriesPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { InviteAcceptPage } from "./pages/InviteAcceptPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SetupPage } from "./pages/SetupPage";
+import { TransactionFormPage } from "./pages/TransactionFormPage";
+import { TransactionsPage } from "./pages/TransactionsPage";
 import { LoginGate } from "./routes/LoginGate";
 import { RequireAuth } from "./routes/RequireAuth";
 import { RootRedirect } from "./routes/RootRedirect";
@@ -28,6 +32,11 @@ function App() {
       <Route element={<RequireAuth />}>
         <Route element={<AuthenticatedShell />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/accounts" element={<AccountsPage />} />
+          <Route path="/categories" element={<CategoriesPage />} />
+          <Route path="/transactions" element={<TransactionsPage />} />
+          <Route path="/transactions/new" element={<TransactionFormPage />} />
+          <Route path="/transactions/:transactionId/edit" element={<TransactionFormPage />} />
         </Route>
       </Route>
 
