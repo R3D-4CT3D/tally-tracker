@@ -4,8 +4,11 @@ import { AuthenticatedShell } from "./components/AuthenticatedShell";
 import { AccountsPage } from "./pages/AccountsPage";
 import { CategoriesPage } from "./pages/CategoriesPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { ImportHistoryPage } from "./pages/ImportHistoryPage";
+import { ImportPage } from "./pages/ImportPage";
 import { InviteAcceptPage } from "./pages/InviteAcceptPage";
 import { LoginPage } from "./pages/LoginPage";
+import { RulesPage } from "./pages/RulesPage";
 import { SetupPage } from "./pages/SetupPage";
 import { TransactionFormPage } from "./pages/TransactionFormPage";
 import { TransactionsPage } from "./pages/TransactionsPage";
@@ -37,6 +40,9 @@ function App() {
           <Route path="/transactions" element={<TransactionsPage />} />
           <Route path="/transactions/new" element={<TransactionFormPage />} />
           <Route path="/transactions/:transactionId/edit" element={<TransactionFormPage />} />
+          <Route path="/import" element={<ImportPage />} />
+          <Route path="/import/history" element={<ImportHistoryPage />} />
+          <Route path="/rules" element={<RulesPage />} />
         </Route>
       </Route>
 

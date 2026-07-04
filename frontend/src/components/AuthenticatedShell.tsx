@@ -8,6 +8,8 @@ const NAV_LINKS = [
   { to: "/transactions", labelKey: "nav.transactions" },
   { to: "/accounts", labelKey: "nav.accounts" },
   { to: "/categories", labelKey: "nav.categories" },
+  { to: "/import", labelKey: "nav.import" },
+  { to: "/rules", labelKey: "nav.rules" },
 ] as const;
 
 export function AuthenticatedShell() {

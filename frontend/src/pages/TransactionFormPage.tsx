@@ -9,6 +9,7 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { SelectField } from "../components/SelectField";
 import { useAccounts } from "../features/accounts/hooks";
 import { useCategories } from "../features/categories/hooks";
+import { useCreateRuleMutation } from "../features/rules/hooks";
 import {
   useCreateTransactionMutation,
   useTransaction,
@@ -58,9 +59,14 @@ export function TransactionFormPage() {
   const existing = useTransaction(transactionId);
   const createTransaction = useCreateTransactionMutation();
   const updateTransaction = useUpdateTransactionMutation();
+  const createRule = useCreateRuleMutation();
 
   const [form, setForm] = useState<TransactionFormState>(EMPTY_FORM);
   const [hasHydrated, setHasHydrated] = useState(false);
+  const [originalCategoryId, setOriginalCategoryId] = useState<string>("");
+  const [rulePrompt, setRulePrompt] = useState<{ description: string; categoryId: string } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (isEditing && existing.data && !hasHydrated) {
@@ -72,6 +78,7 @@ export function TransactionFormPage() {
         categoryId: existing.data.category_id ?? "",
         notes: existing.data.notes ?? "",
       });
+      setOriginalCategoryId(existing.data.category_id ?? "");
       setHasHydrated(true);
     }
   }, [isEditing, existing.data, hasHydrated]);
@@ -91,6 +98,13 @@ export function TransactionFormPage() {
     try {
       if (isEditing && transactionId) {
         await updateTransaction.mutateAsync({ id: transactionId, payload });
+        // A manual recategorization is exactly the moment to offer "create a
+        // rule from this" -- only when the category actually changed to a
+        // real value, not on every save.
+        if (form.categoryId && form.categoryId !== originalCategoryId) {
+          setRulePrompt({ description: form.description, categoryId: form.categoryId });
+          return;
+        }
       } else {
         await createTransaction.mutateAsync(payload);
       }
@@ -98,6 +112,48 @@ export function TransactionFormPage() {
     } catch {
       // surfaced via activeMutation.error below
     }
+  }
+
+  async function handleCreateRuleFromCorrection() {
+    if (!rulePrompt) return;
+    try {
+      await createRule.mutateAsync({
+        match_type: "contains",
+        match_value: rulePrompt.description,
+        set_category_id: rulePrompt.categoryId,
+      });
+    } finally {
+      navigate("/transactions");
+    }
+  }
+
+  if (rulePrompt) {
+    return (
+      <div className="mx-auto max-w-xl rounded-2xl border border-charcoal/10 bg-white/60 p-6 dark:border-linen/10 dark:bg-white/[0.03]">
+        <h2 className="font-display text-lg font-semibold">{t("rules.createFromCorrectionTitle")}</h2>
+        <p className="mt-2 text-sm text-charcoal/70 dark:text-linen/70">
+          {t("rules.createFromCorrectionBody", { description: rulePrompt.description })}
+        </p>
+        <ErrorBanner message={errorMessage(createRule.error, t("common.genericError"))} />
+        <div className="mt-4 flex gap-3">
+          <PrimaryButton
+            type="button"
+            className="w-auto px-4"
+            disabled={createRule.isPending}
+            onClick={handleCreateRuleFromCorrection}
+          >
+            {t("rules.createFromCorrectionConfirm")}
+          </PrimaryButton>
+          <button
+            type="button"
+            onClick={() => navigate("/transactions")}
+            className="rounded-lg border border-charcoal/20 px-4 py-2.5 text-sm font-medium dark:border-linen/20"
+          >
+            {t("rules.createFromCorrectionSkip")}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (isEditing && existing.isLoading) {

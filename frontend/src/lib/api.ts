@@ -21,7 +21,12 @@ function getCookie(name: string): string | null {
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const method = (init.method ?? "GET").toUpperCase();
   const headers = new Headers(init.headers);
-  headers.set("Content-Type", "application/json");
+  // FormData bodies (file uploads) must NOT get an explicit Content-Type --
+  // the browser sets multipart/form-data with the correct boundary itself
+  // only when it's left unset.
+  if (!(init.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
 
   // The one place CSRF gets wired in — every mutating call across the whole
   // app goes through this function, so nothing sets the header per-call.
@@ -64,4 +69,6 @@ export const api = {
       body: body === undefined ? undefined : JSON.stringify(body),
     }),
   delete: <T>(path: string): Promise<T> => request<T>(path, { method: "DELETE" }),
+  postForm: <T>(path: string, formData: FormData): Promise<T> =>
+    request<T>(path, { method: "POST", body: formData }),
 };

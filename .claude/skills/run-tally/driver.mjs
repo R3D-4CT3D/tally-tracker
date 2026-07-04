@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SCREENSHOT_DIR = process.argv[2] ?? join(HERE, "screenshots");
 const BASE_URL = process.argv[3] ?? "https://localhost";
+const CHASE_FIXTURE = join(HERE, "..", "..", "..", "backend", "tests", "fixtures", "chase_sample.csv");
 mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
 const consoleErrors = [];
@@ -116,6 +117,77 @@ await step("add a manual transaction and see it in the filtered list", async () 
   const noMatchCount = await page.locator("text=No transactions match").count();
   if (noMatchCount > 0) throw new Error("search filter hid the transaction it should have matched");
   await shot("08-transactions-search-filtered");
+});
+
+await step("create a rule that auto-categorizes Starbucks as Dining", async () => {
+  await page.goto(BASE_URL + "/rules", { waitUntil: "networkidle" });
+  await page.click('button:has-text("Add rule")');
+  await page.fill("#match_value", "starbucks");
+  await page.selectOption("#category_id", { label: "🍽️ Dining" });
+  await page.click('button:has-text("Create rule")');
+  await page.waitForSelector('text=Contains "starbucks"', { timeout: 15000 });
+  await shot("09-rules");
+});
+
+await step("import a CSV, rule auto-categorizes a row, commit", async () => {
+  await page.goto(BASE_URL + "/import", { waitUntil: "networkidle" });
+  await page.setInputFiles('input[type="file"]', CHASE_FIXTURE);
+  await page.waitForSelector("text=6 rows detected", { timeout: 15000 });
+  await page.selectOption("#account_id", { label: "Everyday Checking" });
+  await shot("10-import-mapping");
+
+  await page.click('button:has-text("Preview")');
+  await page.waitForSelector("text=6 valid", { timeout: 15000 });
+  await shot("11-import-preview");
+
+  await page.click('button:has-text("Import")');
+  await page.waitForSelector("text=Import complete", { timeout: 15000 });
+  const summary = await page.locator("text=/\\d+ transactions imported/").first().textContent();
+  if (!summary || !summary.includes("6 transactions imported")) {
+    throw new Error(`unexpected commit summary: ${summary}`);
+  }
+  await shot("12-import-complete");
+
+  await page.click('button:has-text("View transactions")');
+  await page.waitForSelector("text=STARBUCKS STORE #1234", { timeout: 15000 });
+  await shot("13-transactions-after-import");
+});
+
+await step("re-importing the same file yields zero new duplicates", async () => {
+  await page.goto(BASE_URL + "/import", { waitUntil: "networkidle" });
+  await page.setInputFiles('input[type="file"]', CHASE_FIXTURE);
+  await page.waitForSelector("text=6 rows detected", { timeout: 15000 });
+  await page.selectOption("#account_id", { label: "Everyday Checking" });
+  await page.click('button:has-text("Preview")');
+  await page.waitForSelector("text=6 exact duplicates", { timeout: 15000 });
+  await shot("14-import-reimport-duplicates-flagged");
+
+  await page.click('button:has-text("Import")');
+  await page.waitForSelector("text=Import complete", { timeout: 15000 });
+  const summary = await page.locator("text=/\\d+ transactions imported/").first().textContent();
+  if (!summary || !summary.includes("0 transactions imported")) {
+    throw new Error(`expected zero new rows on re-import, got: ${summary}`);
+  }
+  await shot("15-import-reimport-zero-new-rows");
+});
+
+await step("undo the batch that actually imported rows removes its transactions", async () => {
+  await page.goto(BASE_URL + "/import/history", { waitUntil: "networkidle" });
+  await shot("16-import-history");
+
+  // Batches list most-recent-first -- the re-import (0 imported, 6 skipped)
+  // sorts above the original (6 imported, 0 skipped), so target the row by
+  // its "6 imported" text rather than assuming the first Undo button.
+  const targetRow = page.locator("li", { hasText: "6 imported" });
+  page.once("dialog", (dialog) => dialog.accept());
+  await targetRow.getByRole("button", { name: "Undo" }).click();
+  await page.waitForSelector("text=6 imported", { timeout: 15000, state: "detached" }).catch(() => {});
+  await shot("17-import-history-after-undo");
+
+  await page.goto(BASE_URL + "/transactions", { waitUntil: "networkidle" });
+  const stillPresent = await page.locator("text=STARBUCKS STORE #1234").count();
+  if (stillPresent > 0) throw new Error("undo did not remove the imported transactions");
+  await shot("18-transactions-after-undo");
 });
 
 await browser.close();
