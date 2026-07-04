@@ -7,10 +7,13 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.core.config import get_settings
 from app.models import (  # noqa: F401
+    account,
     audit_log,
+    category,
     household,
     household_member,
     invite,
+    transaction,
     user,
 )
 from app.models.base import Base

@@ -7,6 +7,7 @@ from app.core.security import hash_password
 from app.models.household import Household
 from app.models.household_member import HouseholdMember
 from app.models.user import User
+from app.services.categories import seed_default_categories
 
 
 async def is_setup_complete(db: AsyncSession) -> bool:
@@ -31,6 +32,11 @@ async def create_household_and_owner(
     household = Household(name=household_name)
     db.add(household)
     await db.flush()
+
+    # Categories seed once per household at setup time (spec §4.2) --
+    # this is the one place a household is created, whether via the real
+    # /setup route or the test suite's direct seeding of a second household.
+    await seed_default_categories(db, household.id)
 
     user = User(
         email=owner_email.lower(),
