@@ -151,3 +151,99 @@ async def test_core_entities_are_household_scoped(
         headers={"X-CSRF-Token": session_b.csrf_token},
     )
     assert patch_resp.status_code == 404
+
+
+async def test_transaction_cannot_reference_another_households_account_or_category(
+    client: AsyncClient, db_session: AsyncSession, fake_redis: Redis
+) -> None:
+    """A transaction's account_id/category_id are client-supplied FK
+    references, not just filters -- unlike a stray get-by-id (which a
+    household-scoped WHERE clause naturally hides), storing an unvalidated
+    cross-household id as a foreign key would succeed unless the referenced
+    row is itself confirmed to belong to the caller's household first.
+    """
+    _, _, _, session_a = await seed_household(
+        db_session, fake_redis, household_name="Household A", owner_email="ownera3@example.com"
+    )
+    _, _, _, session_b = await seed_household(
+        db_session, fake_redis, household_name="Household B", owner_email="ownerb3@example.com"
+    )
+
+    apply_session_cookies(client, session_a)
+    account_resp = await client.post(
+        "/api/v1/accounts",
+        json={
+            "name": "A's Checking",
+            "type": "checking",
+            "balance_cents": 0,
+            "color": "#336699",
+            "icon": "bank",
+        },
+        headers={"X-CSRF-Token": session_a.csrf_token},
+    )
+    account_a_id = account_resp.json()["id"]
+    category_a_id = (await client.get("/api/v1/categories")).json()[0]["id"]
+
+    apply_session_cookies(client, session_b)
+    account_b_resp = await client.post(
+        "/api/v1/accounts",
+        json={
+            "name": "B's Checking",
+            "type": "checking",
+            "balance_cents": 0,
+            "color": "#336699",
+            "icon": "bank",
+        },
+        headers={"X-CSRF-Token": session_b.csrf_token},
+    )
+    account_b_id = account_b_resp.json()["id"]
+
+    # B tries to create a transaction against A's account -- must be rejected,
+    # not silently stored with a foreign key into another household's data.
+    create_resp = await client.post(
+        "/api/v1/transactions",
+        json={
+            "account_id": account_a_id,
+            "date": "2026-01-15",
+            "amount_cents": -500,
+            "description": "Cross-household attempt",
+        },
+        headers={"X-CSRF-Token": session_b.csrf_token},
+    )
+    assert create_resp.status_code == 404
+
+    # B tries to create a transaction against B's own account but A's category.
+    create_resp_category = await client.post(
+        "/api/v1/transactions",
+        json={
+            "account_id": account_b_id,
+            "date": "2026-01-15",
+            "amount_cents": -500,
+            "description": "Cross-household category attempt",
+            "category_id": category_a_id,
+        },
+        headers={"X-CSRF-Token": session_b.csrf_token},
+    )
+    assert create_resp_category.status_code == 404
+
+    # A legitimate transaction for B, then try to re-point it at A's account
+    # via update.
+    valid_resp = await client.post(
+        "/api/v1/transactions",
+        json={
+            "account_id": account_b_id,
+            "date": "2026-01-15",
+            "amount_cents": -500,
+            "description": "B's real transaction",
+        },
+        headers={"X-CSRF-Token": session_b.csrf_token},
+    )
+    assert valid_resp.status_code == 201
+    transaction_b_id = valid_resp.json()["id"]
+
+    update_resp = await client.patch(
+        f"/api/v1/transactions/{transaction_b_id}",
+        json={"account_id": account_a_id},
+        headers={"X-CSRF-Token": session_b.csrf_token},
+    )
+    assert update_resp.status_code == 404

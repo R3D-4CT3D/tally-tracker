@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.transaction import Transaction
 from app.schemas.transactions import TransactionCreate, TransactionListParams, TransactionUpdate
+from app.services.accounts import get_account
+from app.services.categories import get_category
 
 _DUPLICATE_MESSAGE = (
     "A transaction with the same account, date, amount, and description already exists"
@@ -23,6 +25,36 @@ class DuplicateTransactionError(Exception):
     identical transaction is exactly the kind of thing that erodes trust in
     the tool, so it's worth catching here too, not just at import time.
     """
+
+
+class InvalidReferenceError(Exception):
+    """Raised when account_id/category_id doesn't resolve to a row in the
+    caller's own household.
+
+    Without this check, a household-scoped WHERE clause on the *new* row
+    would still happily store someone else's account_id/category_id as a
+    foreign key -- household_id on the transaction itself was always
+    server-derived, but the referenced ids came straight from the client
+    and were never verified to belong to that same household (a
+    cross-household IDOR caught by security review after initial M2
+    implementation).
+    """
+
+
+async def _validate_account_reference(
+    db: AsyncSession, *, household_id: uuid.UUID, account_id: uuid.UUID
+) -> None:
+    account = await get_account(db, household_id=household_id, account_id=account_id)
+    if account is None:
+        raise InvalidReferenceError("Account not found")
+
+
+async def _validate_category_reference(
+    db: AsyncSession, *, household_id: uuid.UUID, category_id: uuid.UUID
+) -> None:
+    category = await get_category(db, household_id=household_id, category_id=category_id)
+    if category is None:
+        raise InvalidReferenceError("Category not found")
 
 
 def normalize_description(text: str) -> str:
@@ -60,6 +92,11 @@ async def create_transaction(
     created_by: uuid.UUID,
     payload: TransactionCreate,
 ) -> Transaction:
+    await _validate_account_reference(db, household_id=household_id, account_id=payload.account_id)
+    if payload.category_id is not None:
+        await _validate_category_reference(
+            db, household_id=household_id, category_id=payload.category_id
+        )
     dedupe_hash = compute_dedupe_hash(
         household_id=household_id,
         account_id=payload.account_id,
@@ -113,6 +150,16 @@ async def update_transaction(
         return None
 
     update_data = payload.model_dump(exclude_unset=True)
+
+    if "account_id" in update_data:
+        await _validate_account_reference(
+            db, household_id=household_id, account_id=update_data["account_id"]
+        )
+    if "category_id" in update_data and update_data["category_id"] is not None:
+        await _validate_category_reference(
+            db, household_id=household_id, category_id=update_data["category_id"]
+        )
+
     description = update_data.pop("description", None)
     if description is not None:
         transaction.description_raw = description

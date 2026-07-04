@@ -16,6 +16,7 @@ from app.schemas.transactions import (
 )
 from app.services.transactions import (
     DuplicateTransactionError,
+    InvalidReferenceError,
     create_transaction,
     delete_transaction,
     get_transaction,
@@ -46,6 +47,8 @@ async def create_transaction_route(
         )
     except DuplicateTransactionError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except InvalidReferenceError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     await db.commit()
     return TransactionOut.model_validate(transaction)
 
@@ -115,6 +118,8 @@ async def update_transaction_route(
         )
     except DuplicateTransactionError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except InvalidReferenceError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     if transaction is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Transaction not found")
     await db.commit()
