@@ -18,6 +18,7 @@ class Transaction(Base, TimestampMixin):
         Index("ix_transactions_household_date", "household_id", "date"),
         Index("ix_transactions_household_category", "household_id", "category_id"),
         Index("ix_transactions_household_account", "household_id", "account_id"),
+        Index("ix_transactions_import_batch", "import_batch_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -36,3 +37,6 @@ class Transaction(Base, TimestampMixin):
     source: Mapped[str] = mapped_column(String(20), default="manual")
     dedupe_hash: Mapped[str] = mapped_column(String(64))
     created_by: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    import_batch_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("import_batches.id", ondelete="CASCADE"), nullable=True
+    )

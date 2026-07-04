@@ -8,7 +8,10 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.categories import router as categories_router
 from app.api.v1.health import router as health_router
 from app.api.v1.household import router as household_router
+from app.api.v1.import_profiles import router as import_profiles_router
+from app.api.v1.imports import router as imports_router
 from app.api.v1.invites import router as invites_router
+from app.api.v1.rules import router as rules_router
 from app.api.v1.setup import router as setup_router
 from app.api.v1.transactions import router as transactions_router
 from app.core.config import APP_NAME, get_settings
@@ -35,3 +38,6 @@ app.include_router(household_router, prefix="/api/v1")
 app.include_router(accounts_router, prefix="/api/v1")
 app.include_router(categories_router, prefix="/api/v1")
 app.include_router(transactions_router, prefix="/api/v1")
+app.include_router(imports_router, prefix="/api/v1")
+app.include_router(import_profiles_router, prefix="/api/v1")
+app.include_router(rules_router, prefix="/api/v1")

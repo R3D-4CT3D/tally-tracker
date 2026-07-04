@@ -26,6 +26,16 @@ def login_rate_limit_key(request: Request) -> str:
     return f"{get_remote_address(request)}:{email}"
 
 
+def import_rate_limit_key(request: Request) -> str:
+    """Import abuse is a per-household concern (a household hammering the
+    pipeline, not necessarily a single IP) -- keyed on household_id, stashed
+    onto request.state by app.api.deps.stash_household_for_rate_limit before
+    this (synchronous, slowapi-required) key_func runs.
+    """
+    household_id = getattr(request.state, "import_household_id", None)
+    return household_id or get_remote_address(request)
+
+
 limiter = Limiter(
     key_func=get_remote_address,
     storage_uri=settings.rate_limit_storage_uri,

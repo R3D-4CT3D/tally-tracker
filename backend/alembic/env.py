@@ -12,7 +12,10 @@ from app.models import (  # noqa: F401
     category,
     household,
     household_member,
+    import_batch,
+    import_profile,
     invite,
+    rule,
     transaction,
     user,
 )

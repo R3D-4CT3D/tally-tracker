@@ -43,6 +43,16 @@ def require_role(*roles: str) -> object:
     return Depends(_check)
 
 
+async def stash_household_for_rate_limit(current_user: CurrentUser, request: Request) -> None:
+    """slowapi's key_func must be synchronous, so it can't read the (async,
+    Redis-backed) session itself -- this dependency resolves CurrentUser
+    first and stashes household_id onto request.state for
+    app.core.limiter.import_rate_limit_key to read afterward. Same pattern
+    as cache_login_email/login_rate_limit_key for the login endpoint.
+    """
+    request.state.import_household_id = current_user.household_id
+
+
 async def verify_csrf(
     request: Request,
     current_user: CurrentUser,

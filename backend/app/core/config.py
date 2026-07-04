@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     session_absolute_days: int = 90
     invite_expiry_days: int = 7
 
+    import_max_file_bytes: int = 5 * 1024 * 1024
+    import_max_rows: int = 10_000
+    import_session_ttl_seconds: int = 1800
+    import_undo_window_hours: int = 24
+    import_rate_limit: str = "20/hour"
+    regex_match_timeout_seconds: float = 0.05
+    fuzzy_match_threshold: float = 0.6
+
     @property
     def docs_enabled(self) -> bool:
         return self.env != "production"

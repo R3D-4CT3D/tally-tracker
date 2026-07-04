@@ -153,6 +153,92 @@ async def test_core_entities_are_household_scoped(
     assert patch_resp.status_code == 404
 
 
+async def test_import_batches_and_profiles_are_household_scoped(
+    client: AsyncClient, db_session: AsyncSession, fake_redis: Redis
+) -> None:
+    _, _, _, session_a = await seed_household(
+        db_session, fake_redis, household_name="Household A", owner_email="ownera4@example.com"
+    )
+    _, _, _, session_b = await seed_household(
+        db_session, fake_redis, household_name="Household B", owner_email="ownerb4@example.com"
+    )
+
+    apply_session_cookies(client, session_a)
+    account_resp = await client.post(
+        "/api/v1/accounts",
+        json={
+            "name": "A's Checking",
+            "type": "checking",
+            "balance_cents": 0,
+            "color": "#336699",
+            "icon": "bank",
+        },
+        headers={"X-CSRF-Token": session_a.csrf_token},
+    )
+    account_id = account_resp.json()["id"]
+
+    profile_resp = await client.post(
+        "/api/v1/import-profiles",
+        json={
+            "name": "A's Profile",
+            "column_mapping": {"date": "Date", "description": "Description", "amount": "Amount"},
+            "date_format": "MDY",
+        },
+        headers={"X-CSRF-Token": session_a.csrf_token},
+    )
+    profile_a = profile_resp.json()
+
+    upload_resp = await client.post(
+        "/api/v1/imports/paste",
+        json={"text": "Date,Description,Amount\n01/15/2026,Coffee,-4.50\n"},
+        headers={"X-CSRF-Token": session_a.csrf_token},
+    )
+    session_id = upload_resp.json()["import_session_id"]
+    commit_resp = await client.post(
+        f"/api/v1/imports/{session_id}/commit",
+        json={
+            "column_mapping": {"date": "Date", "description": "Description", "amount": "Amount"},
+            "date_format": "MDY",
+            "account_id": account_id,
+        },
+        headers={"X-CSRF-Token": session_a.csrf_token},
+    )
+    batch_a = commit_resp.json()
+
+    apply_session_cookies(client, session_b)
+
+    profiles_b = await client.get("/api/v1/import-profiles")
+    assert profiles_b.json() == []
+    delete_profile_resp = await client.delete(
+        f"/api/v1/import-profiles/{profile_a['id']}",
+        headers={"X-CSRF-Token": session_b.csrf_token},
+    )
+    assert delete_profile_resp.status_code == 404
+
+    batches_b = await client.get("/api/v1/imports/batches")
+    assert batches_b.json() == []
+    undo_resp = await client.delete(
+        f"/api/v1/imports/batches/{batch_a['id']}",
+        headers={"X-CSRF-Token": session_b.csrf_token},
+    )
+    assert undo_resp.status_code == 404
+
+    # B cannot reuse A's import session id (upload cache) either.
+    preview_resp = await client.post(
+        f"/api/v1/imports/{session_id}/preview",
+        json={
+            "column_mapping": {"date": "Date", "description": "Description", "amount": "Amount"},
+            "date_format": "MDY",
+            "account_id": account_id,
+        },
+    )
+    assert preview_resp.status_code == 404
+
+    apply_session_cookies(client, session_a)
+    batches_a_after = await client.get("/api/v1/imports/batches")
+    assert len(batches_a_after.json()) == 1
+
+
 async def test_transaction_cannot_reference_another_households_account_or_category(
     client: AsyncClient, db_session: AsyncSession, fake_redis: Redis
 ) -> None:
