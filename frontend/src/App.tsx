@@ -2,8 +2,11 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AuthenticatedShell } from "./components/AuthenticatedShell";
 import { AccountsPage } from "./pages/AccountsPage";
+import { BillsPage } from "./pages/BillsPage";
 import { CategoriesPage } from "./pages/CategoriesPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { DebtsPage } from "./pages/DebtsPage";
+import { GoalsPage } from "./pages/GoalsPage";
 import { ImportHistoryPage } from "./pages/ImportHistoryPage";
 import { ImportPage } from "./pages/ImportPage";
 import { InviteAcceptPage } from "./pages/InviteAcceptPage";
@@ -43,6 +46,9 @@ function App() {
           <Route path="/import" element={<ImportPage />} />
           <Route path="/import/history" element={<ImportHistoryPage />} />
           <Route path="/rules" element={<RulesPage />} />
+          <Route path="/bills" element={<BillsPage />} />
+          <Route path="/debts" element={<DebtsPage />} />
+          <Route path="/goals" element={<GoalsPage />} />
         </Route>
       </Route>
 

@@ -16,6 +16,7 @@ function buildQueryString(params: TransactionListParams): string {
   if (params.account_id) search.set("account_id", params.account_id);
   if (params.category_id) search.set("category_id", params.category_id);
   if (params.uncategorized) search.set("uncategorized", "true");
+  if (params.debt_id) search.set("debt_id", params.debt_id);
   if (params.search) search.set("search", params.search);
   if (params.cursor) search.set("cursor", params.cursor);
   if (params.limit) search.set("limit", String(params.limit));

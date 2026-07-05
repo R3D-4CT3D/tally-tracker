@@ -10,6 +10,9 @@ const NAV_LINKS = [
   { to: "/categories", labelKey: "nav.categories" },
   { to: "/import", labelKey: "nav.import" },
   { to: "/rules", labelKey: "nav.rules" },
+  { to: "/bills", labelKey: "nav.bills" },
+  { to: "/debts", labelKey: "nav.debts" },
+  { to: "/goals", labelKey: "nav.goals" },
 ] as const;
 
 export function AuthenticatedShell() {

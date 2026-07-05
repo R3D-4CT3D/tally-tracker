@@ -9,6 +9,7 @@ export interface Transaction {
   notes: string | null;
   source: string;
   created_by: string;
+  debt_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -20,6 +21,7 @@ export interface TransactionCreateRequest {
   description: string;
   category_id?: string | null;
   notes?: string | null;
+  debt_id?: string | null;
 }
 
 export interface TransactionUpdateRequest {
@@ -29,6 +31,7 @@ export interface TransactionUpdateRequest {
   description?: string;
   category_id?: string | null;
   notes?: string | null;
+  debt_id?: string | null;
 }
 
 export interface TransactionFilters {
@@ -37,6 +40,7 @@ export interface TransactionFilters {
   account_id?: string;
   category_id?: string;
   uncategorized?: boolean;
+  debt_id?: string;
   search?: string;
 }
 

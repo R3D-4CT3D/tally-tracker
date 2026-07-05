@@ -31,3 +31,14 @@ export function formatCentsDisplay(cents: number): string {
   const remainder = String(abs % 100).padStart(2, "0");
   return `${negative ? "-" : ""}$${dollars.toLocaleString()}.${remainder}`;
 }
+
+// Basis points -> percent display (e.g. 1999 -> "19.99%") using the same
+// string-arithmetic style as the cents helpers above -- avoids float
+// division (bps / 100) for a value that's shown to the user verbatim.
+export function formatBpsAsPercentDisplay(bps: number): string {
+  const negative = bps < 0;
+  const abs = Math.abs(bps);
+  const wholePart = Math.floor(abs / 100);
+  const remainder = String(abs % 100).padStart(2, "0");
+  return `${negative ? "-" : ""}${wholePart}.${remainder}%`;
+}

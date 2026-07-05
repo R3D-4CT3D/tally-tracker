@@ -9,6 +9,7 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { SelectField } from "../components/SelectField";
 import { useAccounts } from "../features/accounts/hooks";
 import { useCategories } from "../features/categories/hooks";
+import { useDebts } from "../features/debts/hooks";
 import { useCreateRuleMutation } from "../features/rules/hooks";
 import {
   useCreateTransactionMutation,
@@ -25,6 +26,7 @@ interface TransactionFormState {
   description: string;
   categoryId: string;
   notes: string;
+  debtId: string;
 }
 
 function today(): string {
@@ -46,6 +48,7 @@ const EMPTY_FORM: TransactionFormState = {
   description: "",
   categoryId: "",
   notes: "",
+  debtId: "",
 };
 
 export function TransactionFormPage() {
@@ -56,6 +59,7 @@ export function TransactionFormPage() {
 
   const accounts = useAccounts();
   const categories = useCategories();
+  const debts = useDebts();
   const existing = useTransaction(transactionId);
   const createTransaction = useCreateTransactionMutation();
   const updateTransaction = useUpdateTransactionMutation();
@@ -77,6 +81,7 @@ export function TransactionFormPage() {
         description: existing.data.description_display,
         categoryId: existing.data.category_id ?? "",
         notes: existing.data.notes ?? "",
+        debtId: existing.data.debt_id ?? "",
       });
       setOriginalCategoryId(existing.data.category_id ?? "");
       setHasHydrated(true);
@@ -94,6 +99,7 @@ export function TransactionFormPage() {
       description: form.description,
       category_id: form.categoryId || null,
       notes: form.notes || null,
+      debt_id: form.debtId || null,
     };
     try {
       if (isEditing && transactionId) {
@@ -216,6 +222,19 @@ export function TransactionFormPage() {
           {(categories.data ?? []).map((c) => (
             <option key={c.id} value={c.id}>
               {c.icon} {c.name}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField
+          label={t("transactions.debtLabel")}
+          name="debt_id"
+          value={form.debtId}
+          onChange={(e) => setForm({ ...form, debtId: e.target.value })}
+        >
+          <option value="">{t("transactions.noDebt")}</option>
+          {(debts.data ?? []).map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}
             </option>
           ))}
         </SelectField>
