@@ -7,6 +7,10 @@
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Tally</title>
+    <!-- Same-origin static file, not an inline block -- satisfies the
+         app's `script-src 'self'` CSP (deploy/Caddyfile) without a nonce
+         or hash allowlist entry. See public/theme-init.js. -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

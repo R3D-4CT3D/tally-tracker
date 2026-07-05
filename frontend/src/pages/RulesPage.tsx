@@ -2,9 +2,13 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Card } from "../components/Card";
+import { EmptyState } from "../components/EmptyState";
 import { ErrorBanner } from "../components/ErrorBanner";
 import { FormField } from "../components/FormField";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { RowActionLink } from "../components/RowActionLink";
+import { SecondaryButton } from "../components/SecondaryButton";
 import { SelectField } from "../components/SelectField";
 import { useAccounts } from "../features/accounts/hooks";
 import { useCategories } from "../features/categories/hooks";
@@ -93,20 +97,14 @@ export function RulesPage() {
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-xl font-semibold">{t("rules.title")}</h2>
-        <PrimaryButton
-          type="button"
-          className="w-auto px-4 py-2"
-          onClick={() => setIsFormOpen(true)}
-        >
+        <PrimaryButton type="button" className="px-4 py-2" onClick={() => setIsFormOpen(true)}>
           {t("rules.addButton")}
         </PrimaryButton>
       </div>
 
       {isFormOpen ? (
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-4 rounded-2xl border border-charcoal/10 bg-white/60 p-6 dark:border-linen/10 dark:bg-white/[0.03]"
-        >
+        <Card size="form">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <SelectField
             label={t("rules.matchTypeLabel")}
             name="match_type"
@@ -161,22 +159,13 @@ export function RulesPage() {
           />
           <ErrorBanner message={errorMessage(createRule.error, t("common.genericError"))} />
           <div className="flex gap-3">
-            <PrimaryButton
-              type="submit"
-              disabled={createRule.isPending}
-              className="w-auto px-4"
-            >
+            <PrimaryButton type="submit" disabled={createRule.isPending} className="px-4">
               {t("rules.createButton")}
             </PrimaryButton>
-            <button
-              type="button"
-              onClick={closeForm}
-              className="rounded-lg border border-charcoal/20 px-4 py-2.5 text-sm font-medium dark:border-linen/20"
-            >
-              {t("common.cancel")}
-            </button>
+            <SecondaryButton onClick={closeForm}>{t("common.cancel")}</SecondaryButton>
           </div>
-        </form>
+          </form>
+        </Card>
       ) : null}
 
       <ul className="flex flex-col gap-2">
@@ -184,64 +173,55 @@ export function RulesPage() {
           const category = categoryById.get(rule.set_category_id);
           const account = rule.account_id ? accountById.get(rule.account_id) : undefined;
           return (
-            <li
-              key={rule.id}
-              className="flex items-center justify-between rounded-xl border border-charcoal/10 bg-white/60 px-4 py-3 dark:border-linen/10 dark:bg-white/[0.03]"
-            >
-              <div>
-                <p className="font-medium">
-                  {t(`rules.matchTypeLabelShort.${rule.match_type}`)} "{rule.match_value}"
-                  {account ? ` · ${account.name}` : ""}
-                </p>
-                <p className="text-xs text-charcoal/60 dark:text-linen/60">
-                  {t("rules.setsCategory")} {category ? `${category.icon} ${category.name}` : ""}
-                  {rule.set_display_name ? ` · "${rule.set_display_name}"` : ""}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleMove(index, -1)}
-                  disabled={index === 0}
-                  className="text-sm disabled:opacity-30"
-                  aria-label={t("rules.moveUp")}
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleMove(index, 1)}
-                  disabled={index === (rules.data?.length ?? 0) - 1}
-                  className="text-sm disabled:opacity-30"
-                  aria-label={t("rules.moveDown")}
-                >
-                  ↓
-                </button>
-                <label className="flex items-center gap-1 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={rule.enabled}
-                    onChange={() => handleToggleEnabled(rule)}
-                  />
-                  {t("rules.enabled")}
-                </label>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(rule.id)}
-                  className="text-sm text-charcoal/70 underline-offset-2 hover:underline dark:text-linen/70"
-                >
-                  {t("common.delete")}
-                </button>
-              </div>
+            <li key={rule.id}>
+              <Card size="row" className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">
+                    {t(`rules.matchTypeLabelShort.${rule.match_type}`)} "{rule.match_value}"
+                    {account ? ` · ${account.name}` : ""}
+                  </p>
+                  <p className="text-xs text-text-primary/60">
+                    {t("rules.setsCategory")} {category ? `${category.icon} ${category.name}` : ""}
+                    {rule.set_display_name ? ` · "${rule.set_display_name}"` : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleMove(index, -1)}
+                    disabled={index === 0}
+                    className="text-sm disabled:opacity-30"
+                    aria-label={t("rules.moveUp")}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMove(index, 1)}
+                    disabled={index === (rules.data?.length ?? 0) - 1}
+                    className="text-sm disabled:opacity-30"
+                    aria-label={t("rules.moveDown")}
+                  >
+                    ↓
+                  </button>
+                  <label className="flex items-center gap-1 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={rule.enabled}
+                      onChange={() => handleToggleEnabled(rule)}
+                    />
+                    {t("rules.enabled")}
+                  </label>
+                  <RowActionLink onClick={() => handleDelete(rule.id)}>
+                    {t("common.delete")}
+                  </RowActionLink>
+                </div>
+              </Card>
             </li>
           );
         })}
-        {(rules.data ?? []).length === 0 ? (
-          <p className="py-8 text-center text-sm text-charcoal/60 dark:text-linen/60">
-            {t("rules.empty")}
-          </p>
-        ) : null}
       </ul>
+      {(rules.data ?? []).length === 0 ? <EmptyState message={t("rules.empty")} /> : null}
     </div>
   );
 }

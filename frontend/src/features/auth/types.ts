@@ -21,6 +21,7 @@ export interface MeResponse {
   role: string;
   household_id: string;
   household_name: string;
+  last_login_at: string | null;
 }
 
 export interface InviteAcceptRequest {

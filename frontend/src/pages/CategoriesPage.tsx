@@ -2,9 +2,13 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Card } from "../components/Card";
+import { EmptyState } from "../components/EmptyState";
 import { ErrorBanner } from "../components/ErrorBanner";
 import { FormField } from "../components/FormField";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { RowActionLink } from "../components/RowActionLink";
+import { SecondaryButton } from "../components/SecondaryButton";
 import { SelectField } from "../components/SelectField";
 import {
   useCategories,
@@ -96,96 +100,82 @@ export function CategoriesPage() {
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-xl font-semibold">{t("categories.title")}</h2>
-        <PrimaryButton type="button" className="w-auto px-4 py-2" onClick={openCreateForm}>
+        <PrimaryButton type="button" className="px-4 py-2" onClick={openCreateForm}>
           {t("categories.addButton")}
         </PrimaryButton>
       </div>
 
       {isFormOpen ? (
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-4 rounded-2xl border border-charcoal/10 bg-white/60 p-6 dark:border-linen/10 dark:bg-white/[0.03]"
-        >
-          <FormField
-            label={t("categories.nameLabel")}
-            name="name"
-            required
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-          <SelectField
-            label={t("categories.parentLabel")}
-            name="parent"
-            value={form.parentId}
-            onChange={(e) => setForm({ ...form, parentId: e.target.value })}
-          >
-            <option value="">{t("categories.noParent")}</option>
-            {topLevel
-              .filter((c) => c.id !== editingId)
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-          </SelectField>
-          <div className="grid grid-cols-2 gap-4">
+        <Card size="form">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <FormField
-              label={t("accounts.colorLabel")}
-              name="color"
-              type="color"
-              value={form.color}
-              onChange={(e) => setForm({ ...form, color: e.target.value })}
-            />
-            <FormField
-              label={t("accounts.iconLabel")}
-              name="icon"
+              label={t("categories.nameLabel")}
+              name="name"
               required
-              value={form.icon}
-              onChange={(e) => setForm({ ...form, icon: e.target.value })}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
-          </div>
-          <ErrorBanner message={errorMessage(activeMutation.error, t("common.genericError"))} />
-          <div className="flex gap-3">
-            <PrimaryButton
-              type="submit"
-              disabled={activeMutation.isPending}
-              className="w-auto px-4"
+            <SelectField
+              label={t("categories.parentLabel")}
+              name="parent"
+              value={form.parentId}
+              onChange={(e) => setForm({ ...form, parentId: e.target.value })}
             >
-              {editingId ? t("categories.saveButton") : t("categories.createButton")}
-            </PrimaryButton>
-            <button
-              type="button"
-              onClick={closeForm}
-              className="rounded-lg border border-charcoal/20 px-4 py-2.5 text-sm font-medium dark:border-linen/20"
-            >
-              {t("common.cancel")}
-            </button>
-          </div>
-        </form>
+              <option value="">{t("categories.noParent")}</option>
+              {topLevel
+                .filter((c) => c.id !== editingId)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+            </SelectField>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                label={t("accounts.colorLabel")}
+                name="color"
+                type="color"
+                value={form.color}
+                onChange={(e) => setForm({ ...form, color: e.target.value })}
+              />
+              <FormField
+                label={t("accounts.iconLabel")}
+                name="icon"
+                required
+                value={form.icon}
+                onChange={(e) => setForm({ ...form, icon: e.target.value })}
+              />
+            </div>
+            <ErrorBanner message={errorMessage(activeMutation.error, t("common.genericError"))} />
+            <div className="flex gap-3">
+              <PrimaryButton type="submit" disabled={activeMutation.isPending} className="px-4">
+                {editingId ? t("categories.saveButton") : t("categories.createButton")}
+              </PrimaryButton>
+              <SecondaryButton onClick={closeForm}>{t("common.cancel")}</SecondaryButton>
+            </div>
+          </form>
+        </Card>
       ) : null}
 
       <ul className="flex flex-col gap-3">
         {topLevel.map((category) => (
           <li key={category.id} className="flex flex-col gap-2">
-            <div className="flex items-center justify-between rounded-xl border border-charcoal/10 bg-white/60 px-4 py-3 dark:border-linen/10 dark:bg-white/[0.03]">
+            <Card size="row" className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="text-lg" aria-hidden>
                   {category.icon}
                 </span>
                 <span className="font-medium">{category.name}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => openEditForm(category)}
-                className="text-sm text-charcoal/70 underline-offset-2 hover:underline dark:text-linen/70"
-              >
+              <RowActionLink onClick={() => openEditForm(category)}>
                 {t("common.edit")}
-              </button>
-            </div>
+              </RowActionLink>
+            </Card>
             {(childrenByParent.get(category.id) ?? []).map((child) => (
-              <div
+              <Card
                 key={child.id}
-                className="ml-8 flex items-center justify-between rounded-xl border border-charcoal/10 bg-white/40 px-4 py-2 dark:border-linen/10 dark:bg-white/[0.02]"
+                size="row"
+                className="ml-8 flex items-center justify-between opacity-90"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-base" aria-hidden>
@@ -193,18 +183,15 @@ export function CategoriesPage() {
                   </span>
                   <span className="text-sm">{child.name}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openEditForm(child)}
-                  className="text-sm text-charcoal/70 underline-offset-2 hover:underline dark:text-linen/70"
-                >
+                <RowActionLink onClick={() => openEditForm(child)}>
                   {t("common.edit")}
-                </button>
-              </div>
+                </RowActionLink>
+              </Card>
             ))}
           </li>
         ))}
       </ul>
+      {topLevel.length === 0 ? <EmptyState message={t("categories.empty")} /> : null}
     </div>
   );
 }

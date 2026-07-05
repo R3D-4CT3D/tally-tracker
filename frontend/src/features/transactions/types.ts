@@ -41,6 +41,9 @@ export interface TransactionFilters {
   category_id?: string;
   uncategorized?: boolean;
   debt_id?: string;
+  // Filters on created_at (when the row was entered/imported), not `date`
+  // (the ledger date) -- powers the dashboard's "since you were here" (M5).
+  created_after?: string;
   search?: string;
 }
 
@@ -52,4 +55,8 @@ export interface TransactionListParams extends TransactionFilters {
 export interface TransactionListResponse {
   items: Transaction[];
   next_cursor: string | null;
+}
+
+export interface TransactionCountResponse {
+  count: number;
 }

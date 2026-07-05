@@ -3,9 +3,11 @@ import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+import { Card } from "../components/Card";
 import { ErrorBanner } from "../components/ErrorBanner";
 import { FormField } from "../components/FormField";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { SecondaryButton } from "../components/SecondaryButton";
 import { SelectField } from "../components/SelectField";
 import { useAccounts } from "../features/accounts/hooks";
 import { useCategories } from "../features/categories/hooks";
@@ -164,22 +166,22 @@ export function ImportPage() {
         <h2 className="font-display text-xl font-semibold">{t("imports.title")}</h2>
         <Link
           to="/import/history"
-          className="text-sm text-charcoal/70 underline-offset-2 hover:underline dark:text-linen/70"
+          className="text-sm text-text-primary/70 underline-offset-2 hover:underline"
         >
           {t("imports.viewHistory")}
         </Link>
       </div>
 
       {step === "select" ? (
-        <div className="flex flex-col gap-4 rounded-2xl border border-charcoal/10 bg-white/60 p-6 dark:border-linen/10 dark:bg-white/[0.03]">
+        <Card size="form" className="flex flex-col gap-4">
           <div className="flex gap-3">
             <button
               type="button"
               onClick={() => setSourceMode("csv")}
               className={`rounded-lg px-4 py-2 text-sm font-medium ${
                 sourceMode === "csv"
-                  ? "bg-ember text-charcoal"
-                  : "border border-charcoal/20 dark:border-linen/20"
+                  ? "bg-ember-500 text-charcoal-950"
+                  : "border border-border/20"
               }`}
             >
               {t("imports.uploadCsv")}
@@ -189,8 +191,8 @@ export function ImportPage() {
               onClick={() => setSourceMode("paste")}
               className={`rounded-lg px-4 py-2 text-sm font-medium ${
                 sourceMode === "paste"
-                  ? "bg-ember text-charcoal"
-                  : "border border-charcoal/20 dark:border-linen/20"
+                  ? "bg-ember-500 text-charcoal-950"
+                  : "border border-border/20"
               }`}
             >
               {t("imports.pasteData")}
@@ -215,7 +217,7 @@ export function ImportPage() {
 
           {sourceMode === "csv" ? (
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-charcoal/80 dark:text-linen/80">
+              <label className="text-sm font-medium text-text-primary/80">
                 {t("imports.csvFileLabel")}
               </label>
               <input
@@ -229,7 +231,7 @@ export function ImportPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              <label className="text-sm font-medium text-charcoal/80 dark:text-linen/80">
+              <label className="text-sm font-medium text-text-primary/80">
                 {t("imports.pasteLabel")}
               </label>
               <textarea
@@ -237,7 +239,7 @@ export function ImportPage() {
                 onChange={(e) => setPasteText(e.target.value)}
                 rows={8}
                 placeholder={t("imports.pastePlaceholder")}
-                className="rounded-lg border border-charcoal/15 bg-white/50 px-3 py-2 text-sm font-mono dark:border-linen/15 dark:bg-black/20 dark:text-linen"
+                className="rounded-lg border border-border/15 bg-surface-subtle px-3 py-2 text-sm font-mono"
               />
               <ErrorBanner message={errorMessage(pasteImport.error, t("common.genericError"))} />
               <PrimaryButton
@@ -250,12 +252,12 @@ export function ImportPage() {
               </PrimaryButton>
             </div>
           )}
-        </div>
+        </Card>
       ) : null}
 
       {step === "mapping" && uploadResult ? (
-        <div className="flex flex-col gap-4 rounded-2xl border border-charcoal/10 bg-white/60 p-6 dark:border-linen/10 dark:bg-white/[0.03]">
-          <p className="text-sm text-charcoal/60 dark:text-linen/60">
+        <Card size="form" className="flex flex-col gap-4">
+          <p className="text-sm text-text-primary/60">
             {t("imports.rowsDetected", { count: uploadResult.row_count })}
           </p>
 
@@ -349,10 +351,10 @@ export function ImportPage() {
           ) : null}
 
           {uploadResult.sample_rows.length > 0 ? (
-            <div className="overflow-x-auto rounded-lg border border-charcoal/10 dark:border-linen/10">
+            <div className="overflow-x-auto rounded-lg border border-border/10">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-charcoal/10 dark:border-linen/10">
+                  <tr className="border-b border-border/10">
                     {uploadResult.header.map((h) => (
                       <th key={h} className="px-2 py-1 text-left font-medium">
                         {h}
@@ -379,42 +381,33 @@ export function ImportPage() {
           <div className="flex gap-3">
             <PrimaryButton
               type="button"
-              className="w-auto px-4"
+              className="px-4"
               disabled={!canPreview || previewImport.isPending}
               onClick={handlePreview}
             >
               {t("imports.previewButton")}
             </PrimaryButton>
-            <button
-              type="button"
-              onClick={resetWizard}
-              className="rounded-lg border border-charcoal/20 px-4 py-2.5 text-sm font-medium dark:border-linen/20"
-            >
-              {t("common.cancel")}
-            </button>
+            <SecondaryButton onClick={resetWizard}>{t("common.cancel")}</SecondaryButton>
           </div>
-        </div>
+        </Card>
       ) : null}
 
       {step === "preview" && preview ? (
         <div className="flex flex-col gap-4">
-          <div className="flex gap-4 text-sm text-charcoal/70 dark:text-linen/70">
+          <div className="flex gap-4 text-sm text-text-primary/70">
             <span>{t("imports.validCount", { count: preview.valid_count })}</span>
             <span>{t("imports.errorCount", { count: preview.error_count })}</span>
             <span>{t("imports.exactDuplicateCount", { count: preview.exact_duplicate_count })}</span>
             <span>{t("imports.fuzzyDuplicateCount", { count: preview.fuzzy_duplicate_count })}</span>
           </div>
 
-          <div className="max-h-96 overflow-y-auto rounded-lg border border-charcoal/10 dark:border-linen/10">
+          <div className="max-h-96 overflow-y-auto rounded-lg border border-border/10">
             <table className="w-full text-sm">
               <tbody>
                 {preview.rows.map((row) => {
                   const category = row.category_id ? categoryById.get(row.category_id) : undefined;
                   return (
-                    <tr
-                      key={row.row_index}
-                      className="border-b border-charcoal/10 last:border-0 dark:border-linen/10"
-                    >
+                    <tr key={row.row_index} className="border-b border-border/10 last:border-0">
                       <td className="px-2 py-2">
                         <input
                           type="checkbox"
@@ -433,7 +426,7 @@ export function ImportPage() {
                       </td>
                       <td className="px-2 py-2 text-xs">
                         {row.error ? (
-                          <span className="text-red-600 dark:text-red-400">{row.error}</span>
+                          <span className="text-danger-600 dark:text-danger-400">{row.error}</span>
                         ) : row.duplicate === "exact" ? (
                           <span className="text-amber-700 dark:text-amber-400">
                             {t("imports.exactDuplicateBadge")}
@@ -463,49 +456,33 @@ export function ImportPage() {
           <div className="flex gap-3">
             <PrimaryButton
               type="button"
-              className="w-auto px-4"
+              className="px-4"
               disabled={commitImport.isPending}
               onClick={handleCommit}
             >
               {t("imports.commitButton")}
             </PrimaryButton>
-            <button
-              type="button"
-              onClick={() => setStep("mapping")}
-              className="rounded-lg border border-charcoal/20 px-4 py-2.5 text-sm font-medium dark:border-linen/20"
-            >
-              {t("common.back")}
-            </button>
+            <SecondaryButton onClick={() => setStep("mapping")}>{t("common.back")}</SecondaryButton>
           </div>
         </div>
       ) : null}
 
       {step === "done" && result ? (
-        <div className="flex flex-col gap-4 rounded-2xl border border-charcoal/10 bg-white/60 p-6 dark:border-linen/10 dark:bg-white/[0.03]">
+        <Card size="form" className="flex flex-col gap-4">
           <p className="font-medium">{t("imports.commitSuccess")}</p>
-          <p className="text-sm text-charcoal/70 dark:text-linen/70">
+          <p className="text-sm text-text-primary/70">
             {t("imports.commitSummary", {
               imported: result.imported_count,
               skipped: result.skipped_dupes,
             })}
           </p>
           <div className="flex gap-3">
-            <PrimaryButton
-              type="button"
-              className="w-auto px-4"
-              onClick={() => navigate("/transactions")}
-            >
+            <PrimaryButton type="button" className="px-4" onClick={() => navigate("/transactions")}>
               {t("imports.viewTransactions")}
             </PrimaryButton>
-            <button
-              type="button"
-              onClick={resetWizard}
-              className="rounded-lg border border-charcoal/20 px-4 py-2.5 text-sm font-medium dark:border-linen/20"
-            >
-              {t("imports.importAnother")}
-            </button>
+            <SecondaryButton onClick={resetWizard}>{t("imports.importAnother")}</SecondaryButton>
           </div>
-        </div>
+        </Card>
       ) : null}
     </div>
   );

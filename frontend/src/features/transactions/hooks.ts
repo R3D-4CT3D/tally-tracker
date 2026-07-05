@@ -3,21 +3,29 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import type {
   Transaction,
+  TransactionCountResponse,
   TransactionCreateRequest,
+  TransactionFilters,
   TransactionListParams,
   TransactionListResponse,
   TransactionUpdateRequest,
 } from "./types";
 
-function buildQueryString(params: TransactionListParams): string {
+function buildFilterParams(filters: TransactionFilters): URLSearchParams {
   const search = new URLSearchParams();
-  if (params.date_from) search.set("date_from", params.date_from);
-  if (params.date_to) search.set("date_to", params.date_to);
-  if (params.account_id) search.set("account_id", params.account_id);
-  if (params.category_id) search.set("category_id", params.category_id);
-  if (params.uncategorized) search.set("uncategorized", "true");
-  if (params.debt_id) search.set("debt_id", params.debt_id);
-  if (params.search) search.set("search", params.search);
+  if (filters.date_from) search.set("date_from", filters.date_from);
+  if (filters.date_to) search.set("date_to", filters.date_to);
+  if (filters.account_id) search.set("account_id", filters.account_id);
+  if (filters.category_id) search.set("category_id", filters.category_id);
+  if (filters.uncategorized) search.set("uncategorized", "true");
+  if (filters.debt_id) search.set("debt_id", filters.debt_id);
+  if (filters.created_after) search.set("created_after", filters.created_after);
+  if (filters.search) search.set("search", filters.search);
+  return search;
+}
+
+function buildQueryString(params: TransactionListParams): string {
+  const search = buildFilterParams(params);
   if (params.cursor) search.set("cursor", params.cursor);
   if (params.limit) search.set("limit", String(params.limit));
   const qs = search.toString();
@@ -71,5 +79,21 @@ export function useDeleteTransactionMutation() {
   return useMutation({
     mutationFn: (id: string) => api.delete<void>(`/transactions/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["transactions"] }),
+  });
+}
+
+export function useTransactionCount(filters: TransactionFilters, enabled = true) {
+  const qs = buildFilterParams(filters).toString();
+  return useQuery({
+    queryKey: ["transaction-count", filters] as const,
+    queryFn: () => api.get<TransactionCountResponse>(`/transactions/count${qs ? `?${qs}` : ""}`),
+    enabled,
+  });
+}
+
+export function useUncategorizedCount() {
+  return useQuery({
+    queryKey: ["uncategorized-count"] as const,
+    queryFn: () => api.get<TransactionCountResponse>("/transactions/uncategorized-count"),
   });
 }

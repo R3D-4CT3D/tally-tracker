@@ -1,10 +1,11 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AuthenticatedShell } from "./components/AuthenticatedShell";
+import { PageSpinner } from "./components/PageSpinner";
 import { AccountsPage } from "./pages/AccountsPage";
 import { BillsPage } from "./pages/BillsPage";
 import { CategoriesPage } from "./pages/CategoriesPage";
-import { DashboardPage } from "./pages/DashboardPage";
 import { DebtsPage } from "./pages/DebtsPage";
 import { GoalsPage } from "./pages/GoalsPage";
 import { ImportHistoryPage } from "./pages/ImportHistoryPage";
@@ -19,6 +20,13 @@ import { LoginGate } from "./routes/LoginGate";
 import { RequireAuth } from "./routes/RequireAuth";
 import { RootRedirect } from "./routes/RootRedirect";
 import { SetupGate } from "./routes/SetupGate";
+
+// Lazy-loaded: Recharts (and the dashboard's aggregation hooks) shouldn't
+// inflate the login/setup bundle -- that's the actual "<2s on a mid-range
+// phone" path, not the dashboard itself.
+const DashboardPage = lazy(() =>
+  import("./pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
+);
 
 function App() {
   return (
@@ -37,7 +45,14 @@ function App() {
 
       <Route element={<RequireAuth />}>
         <Route element={<AuthenticatedShell />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route
+            path="/dashboard"
+            element={
+              <Suspense fallback={<PageSpinner />}>
+                <DashboardPage />
+              </Suspense>
+            }
+          />
           <Route path="/accounts" element={<AccountsPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/transactions" element={<TransactionsPage />} />

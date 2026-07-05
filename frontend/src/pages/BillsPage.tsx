@@ -2,9 +2,14 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Card } from "../components/Card";
+import { EmptyState } from "../components/EmptyState";
 import { ErrorBanner } from "../components/ErrorBanner";
 import { FormField } from "../components/FormField";
+import { MoneyDisplay } from "../components/MoneyDisplay";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { RowActionLink } from "../components/RowActionLink";
+import { SecondaryButton } from "../components/SecondaryButton";
 import { SelectField } from "../components/SelectField";
 import { useAccounts } from "../features/accounts/hooks";
 import {
@@ -208,134 +213,127 @@ export function BillsPage() {
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-xl font-semibold">{t("bills.title")}</h2>
-        <PrimaryButton type="button" className="w-auto px-4 py-2" onClick={openCreateForm}>
+        <PrimaryButton type="button" className="px-4 py-2" onClick={openCreateForm}>
           {t("bills.addButton")}
         </PrimaryButton>
       </div>
 
       {isFormOpen ? (
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-4 rounded-2xl border border-charcoal/10 bg-white/60 p-6 dark:border-linen/10 dark:bg-white/[0.03]"
-        >
-          <FormField
-            label={t("bills.nameLabel")}
-            name="name"
-            required
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-          <label className="flex items-center gap-2 text-sm text-charcoal/70 dark:text-linen/70">
-            <input
-              type="checkbox"
-              checked={form.isVariable}
-              onChange={(e) => setForm({ ...form, isVariable: e.target.checked })}
-            />
-            {t("bills.isVariableLabel")}
-          </label>
-          {!form.isVariable ? (
+        <Card size="form">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <FormField
-              label={t("bills.amountLabel")}
-              name="amount"
-              inputMode="decimal"
-              value={form.amountDollars}
-              onChange={(e) => setForm({ ...form, amountDollars: e.target.value })}
+              label={t("bills.nameLabel")}
+              name="name"
+              required
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
-          ) : null}
-          <div className="grid grid-cols-2 gap-4">
+            <label className="flex items-center gap-2 text-sm text-text-primary/70">
+              <input
+                type="checkbox"
+                checked={form.isVariable}
+                onChange={(e) => setForm({ ...form, isVariable: e.target.checked })}
+              />
+              {t("bills.isVariableLabel")}
+            </label>
+            {!form.isVariable ? (
+              <FormField
+                label={t("bills.amountLabel")}
+                name="amount"
+                inputMode="decimal"
+                value={form.amountDollars}
+                onChange={(e) => setForm({ ...form, amountDollars: e.target.value })}
+              />
+            ) : null}
+            <div className="grid grid-cols-2 gap-4">
+              <SelectField
+                label={t("bills.frequencyLabel")}
+                name="frequency"
+                value={form.frequency}
+                onChange={(e) => setForm({ ...form, frequency: e.target.value as BillFrequency })}
+              >
+                {BILL_FREQUENCIES.map((freq) => (
+                  <option key={freq} value={freq}>
+                    {t(`bills.frequencies.${freq}`)}
+                  </option>
+                ))}
+              </SelectField>
+              <FormField
+                label={t("bills.dueDayLabel")}
+                name="due_day"
+                type="number"
+                min={1}
+                max={31}
+                required
+                value={form.dueDay}
+                onChange={(e) => setForm({ ...form, dueDay: e.target.value })}
+              />
+            </div>
+            {form.frequency === "custom" ? (
+              <FormField
+                label={t("bills.customIntervalDaysLabel")}
+                name="custom_interval_days"
+                type="number"
+                min={1}
+                required
+                value={form.customIntervalDays}
+                onChange={(e) => setForm({ ...form, customIntervalDays: e.target.value })}
+              />
+            ) : null}
+            <FormField
+              label={t("bills.nextDueDateLabel")}
+              name="next_due_date"
+              type="date"
+              required
+              value={form.nextDueDate}
+              onChange={(e) => setForm({ ...form, nextDueDate: e.target.value })}
+            />
             <SelectField
-              label={t("bills.frequencyLabel")}
-              name="frequency"
-              value={form.frequency}
-              onChange={(e) => setForm({ ...form, frequency: e.target.value as BillFrequency })}
+              label={t("bills.accountLabel")}
+              name="account_id"
+              value={form.accountId}
+              onChange={(e) => setForm({ ...form, accountId: e.target.value })}
             >
-              {BILL_FREQUENCIES.map((freq) => (
-                <option key={freq} value={freq}>
-                  {t(`bills.frequencies.${freq}`)}
+              <option value="">{t("bills.noAccount")}</option>
+              {(accounts.data ?? []).map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
                 </option>
               ))}
             </SelectField>
-            <FormField
-              label={t("bills.dueDayLabel")}
-              name="due_day"
-              type="number"
-              min={1}
-              max={31}
-              required
-              value={form.dueDay}
-              onChange={(e) => setForm({ ...form, dueDay: e.target.value })}
-            />
-          </div>
-          {form.frequency === "custom" ? (
-            <FormField
-              label={t("bills.customIntervalDaysLabel")}
-              name="custom_interval_days"
-              type="number"
-              min={1}
-              required
-              value={form.customIntervalDays}
-              onChange={(e) => setForm({ ...form, customIntervalDays: e.target.value })}
-            />
-          ) : null}
-          <FormField
-            label={t("bills.nextDueDateLabel")}
-            name="next_due_date"
-            type="date"
-            required
-            value={form.nextDueDate}
-            onChange={(e) => setForm({ ...form, nextDueDate: e.target.value })}
-          />
-          <SelectField
-            label={t("bills.accountLabel")}
-            name="account_id"
-            value={form.accountId}
-            onChange={(e) => setForm({ ...form, accountId: e.target.value })}
-          >
-            <option value="">{t("bills.noAccount")}</option>
-            {(accounts.data ?? []).map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </SelectField>
-          <SelectField
-            label={t("bills.categoryLabel")}
-            name="category_id"
-            value={form.categoryId}
-            onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-          >
-            <option value="">{t("bills.noCategory")}</option>
-            {(categories.data ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.icon} {c.name}
-              </option>
-            ))}
-          </SelectField>
-          <label className="flex items-center gap-2 text-sm text-charcoal/70 dark:text-linen/70">
-            <input
-              type="checkbox"
-              checked={form.autopay}
-              onChange={(e) => setForm({ ...form, autopay: e.target.checked })}
-            />
-            {t("bills.autopayLabel")}
-          </label>
-          <ErrorBanner message={errorMessage(activeMutation.error, t("common.genericError"))} />
-          <div className="flex gap-3">
-            <PrimaryButton type="submit" disabled={activeMutation.isPending} className="w-auto px-4">
-              {editingId ? t("bills.saveButton") : t("bills.createButton")}
-            </PrimaryButton>
-            <button
-              type="button"
-              onClick={closeForm}
-              className="rounded-lg border border-charcoal/20 px-4 py-2.5 text-sm font-medium dark:border-linen/20"
+            <SelectField
+              label={t("bills.categoryLabel")}
+              name="category_id"
+              value={form.categoryId}
+              onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
             >
-              {t("common.cancel")}
-            </button>
-          </div>
-        </form>
+              <option value="">{t("bills.noCategory")}</option>
+              {(categories.data ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.icon} {c.name}
+                </option>
+              ))}
+            </SelectField>
+            <label className="flex items-center gap-2 text-sm text-text-primary/70">
+              <input
+                type="checkbox"
+                checked={form.autopay}
+                onChange={(e) => setForm({ ...form, autopay: e.target.checked })}
+              />
+              {t("bills.autopayLabel")}
+            </label>
+            <ErrorBanner message={errorMessage(activeMutation.error, t("common.genericError"))} />
+            <div className="flex gap-3">
+              <PrimaryButton type="submit" disabled={activeMutation.isPending} className="px-4">
+                {editingId ? t("bills.saveButton") : t("bills.createButton")}
+              </PrimaryButton>
+              <SecondaryButton onClick={closeForm}>{t("common.cancel")}</SecondaryButton>
+            </div>
+          </form>
+        </Card>
       ) : null}
 
-      <label className="flex items-center gap-2 text-sm text-charcoal/70 dark:text-linen/70">
+      <label className="flex items-center gap-2 text-sm text-text-primary/70">
         <input
           type="checkbox"
           checked={includeArchived}
@@ -346,164 +344,148 @@ export function BillsPage() {
 
       <ul className="flex flex-col gap-3">
         {bills.data?.map((bill) => (
-          <li
-            key={bill.id}
-            className="flex flex-col gap-3 rounded-xl border border-charcoal/10 bg-white/60 px-4 py-3 dark:border-linen/10 dark:bg-white/[0.03]"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">
-                  {bill.name}
-                  {bill.archived ? (
-                    <span className="ml-2 text-xs text-charcoal/50 dark:text-linen/50">
-                      {t("bills.archivedBadge")}
-                    </span>
-                  ) : null}
-                </p>
-                <p className="text-xs text-charcoal/60 dark:text-linen/60">
-                  {t(`bills.frequencies.${bill.frequency}`)} ·{" "}
-                  {t("bills.nextDueValue", { date: bill.next_due_date })}
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="font-medium">
-                  {bill.amount_cents !== null ? formatCentsDisplay(bill.amount_cents) : "—"}
-                </span>
-                {!bill.archived ? (
-                  <button
-                    type="button"
-                    onClick={() => openMarkPaidForm(bill)}
-                    className="text-sm text-charcoal/70 underline-offset-2 hover:underline dark:text-linen/70"
-                  >
-                    {t("bills.markPaidButton")}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => openEditForm(bill)}
-                  className="text-sm text-charcoal/70 underline-offset-2 hover:underline dark:text-linen/70"
-                >
-                  {t("common.edit")}
-                </button>
-                {!bill.archived ? (
-                  <button
-                    type="button"
-                    onClick={() => handleArchive(bill.id)}
-                    className="text-sm text-charcoal/70 underline-offset-2 hover:underline dark:text-linen/70"
-                  >
-                    {t("common.archive")}
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
-            {markPayingId === bill.id ? (
-              <form
-                onSubmit={(e) => handleMarkPaid(e, bill.id)}
-                className="flex flex-col gap-3 rounded-lg border border-charcoal/10 p-3 dark:border-linen/10"
-              >
-                <div className="flex gap-4 text-sm">
-                  <label className="flex items-center gap-1.5">
-                    <input
-                      type="radio"
-                      checked={markPaidForm.mode === "quick_create"}
-                      onChange={() => setMarkPaidForm({ ...markPaidForm, mode: "quick_create" })}
-                    />
-                    {t("bills.quickCreateMode")}
-                  </label>
-                  <label className="flex items-center gap-1.5">
-                    <input
-                      type="radio"
-                      checked={markPaidForm.mode === "link_existing"}
-                      onChange={() => setMarkPaidForm({ ...markPaidForm, mode: "link_existing" })}
-                    />
-                    {t("bills.linkExistingMode")}
-                  </label>
+          <li key={bill.id}>
+            <Card size="row" className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">
+                    {bill.name}
+                    {bill.archived ? (
+                      <span className="ml-2 text-xs text-text-primary/50">
+                        {t("bills.archivedBadge")}
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="text-xs text-text-primary/60">
+                    {t(`bills.frequencies.${bill.frequency}`)} ·{" "}
+                    {t("bills.nextDueValue", { date: bill.next_due_date })}
+                  </p>
                 </div>
+                <div className="flex items-center gap-4">
+                  {bill.amount_cents !== null ? (
+                    <MoneyDisplay cents={bill.amount_cents} />
+                  ) : (
+                    <span className="font-medium">—</span>
+                  )}
+                  {!bill.archived ? (
+                    <RowActionLink onClick={() => openMarkPaidForm(bill)}>
+                      {t("bills.markPaidButton")}
+                    </RowActionLink>
+                  ) : null}
+                  <RowActionLink onClick={() => openEditForm(bill)}>
+                    {t("common.edit")}
+                  </RowActionLink>
+                  {!bill.archived ? (
+                    <RowActionLink onClick={() => handleArchive(bill.id)}>
+                      {t("common.archive")}
+                    </RowActionLink>
+                  ) : null}
+                </div>
+              </div>
 
-                {markPaidForm.mode === "quick_create" ? (
-                  <>
+              {markPayingId === bill.id ? (
+                <form
+                  onSubmit={(e) => handleMarkPaid(e, bill.id)}
+                  className="flex flex-col gap-3 rounded-lg border border-border/10 p-3"
+                >
+                  <div className="flex gap-4 text-sm">
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="radio"
+                        checked={markPaidForm.mode === "quick_create"}
+                        onChange={() => setMarkPaidForm({ ...markPaidForm, mode: "quick_create" })}
+                      />
+                      {t("bills.quickCreateMode")}
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="radio"
+                        checked={markPaidForm.mode === "link_existing"}
+                        onChange={() => setMarkPaidForm({ ...markPaidForm, mode: "link_existing" })}
+                      />
+                      {t("bills.linkExistingMode")}
+                    </label>
+                  </div>
+
+                  {markPaidForm.mode === "quick_create" ? (
+                    <>
+                      <SelectField
+                        label={t("bills.paymentAccountLabel")}
+                        name="mark_paid_account_id"
+                        required
+                        value={markPaidForm.accountId}
+                        onChange={(e) =>
+                          setMarkPaidForm({ ...markPaidForm, accountId: e.target.value })
+                        }
+                      >
+                        <option value="" disabled>
+                          {t("bills.selectAccount")}
+                        </option>
+                        {(accounts.data ?? []).map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.name}
+                          </option>
+                        ))}
+                      </SelectField>
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          label={t("bills.paymentAmountLabel")}
+                          name="mark_paid_amount"
+                          inputMode="decimal"
+                          required
+                          value={markPaidForm.amountDollars}
+                          onChange={(e) =>
+                            setMarkPaidForm({ ...markPaidForm, amountDollars: e.target.value })
+                          }
+                        />
+                        <FormField
+                          label={t("bills.paymentDateLabel")}
+                          name="mark_paid_date"
+                          type="date"
+                          required
+                          value={markPaidForm.date}
+                          onChange={(e) => setMarkPaidForm({ ...markPaidForm, date: e.target.value })}
+                        />
+                      </div>
+                    </>
+                  ) : (
                     <SelectField
-                      label={t("bills.paymentAccountLabel")}
-                      name="mark_paid_account_id"
+                      label={t("bills.linkTransactionLabel")}
+                      name="mark_paid_transaction_id"
                       required
-                      value={markPaidForm.accountId}
-                      onChange={(e) => setMarkPaidForm({ ...markPaidForm, accountId: e.target.value })}
+                      value={markPaidForm.transactionId}
+                      onChange={(e) =>
+                        setMarkPaidForm({ ...markPaidForm, transactionId: e.target.value })
+                      }
                     >
                       <option value="" disabled>
-                        {t("bills.selectAccount")}
+                        {t("bills.selectTransaction")}
                       </option>
-                      {(accounts.data ?? []).map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
+                      {(recentTransactions.data?.items ?? []).map((txn) => (
+                        <option key={txn.id} value={txn.id}>
+                          {txn.date} · {txn.description_display} ·{" "}
+                          {formatCentsDisplay(txn.amount_cents)}
                         </option>
                       ))}
                     </SelectField>
-                    <div className="grid grid-cols-2 gap-3">
-                      <FormField
-                        label={t("bills.paymentAmountLabel")}
-                        name="mark_paid_amount"
-                        inputMode="decimal"
-                        required
-                        value={markPaidForm.amountDollars}
-                        onChange={(e) =>
-                          setMarkPaidForm({ ...markPaidForm, amountDollars: e.target.value })
-                        }
-                      />
-                      <FormField
-                        label={t("bills.paymentDateLabel")}
-                        name="mark_paid_date"
-                        type="date"
-                        required
-                        value={markPaidForm.date}
-                        onChange={(e) => setMarkPaidForm({ ...markPaidForm, date: e.target.value })}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <SelectField
-                    label={t("bills.linkTransactionLabel")}
-                    name="mark_paid_transaction_id"
-                    required
-                    value={markPaidForm.transactionId}
-                    onChange={(e) =>
-                      setMarkPaidForm({ ...markPaidForm, transactionId: e.target.value })
-                    }
-                  >
-                    <option value="" disabled>
-                      {t("bills.selectTransaction")}
-                    </option>
-                    {(recentTransactions.data?.items ?? []).map((txn) => (
-                      <option key={txn.id} value={txn.id}>
-                        {txn.date} · {txn.description_display} · {formatCentsDisplay(txn.amount_cents)}
-                      </option>
-                    ))}
-                  </SelectField>
-                )}
+                  )}
 
-                <ErrorBanner message={errorMessage(markPaid.error, t("common.genericError"))} />
-                <div className="flex gap-3">
-                  <PrimaryButton type="submit" disabled={markPaid.isPending} className="w-auto px-4">
-                    {t("bills.submitMarkPaidButton")}
-                  </PrimaryButton>
-                  <button
-                    type="button"
-                    onClick={closeMarkPaidForm}
-                    className="rounded-lg border border-charcoal/20 px-4 py-2.5 text-sm font-medium dark:border-linen/20"
-                  >
-                    {t("common.cancel")}
-                  </button>
-                </div>
-              </form>
-            ) : null}
+                  <ErrorBanner message={errorMessage(markPaid.error, t("common.genericError"))} />
+                  <div className="flex gap-3">
+                    <PrimaryButton type="submit" disabled={markPaid.isPending} className="px-4">
+                      {t("bills.submitMarkPaidButton")}
+                    </PrimaryButton>
+                    <SecondaryButton onClick={closeMarkPaidForm}>
+                      {t("common.cancel")}
+                    </SecondaryButton>
+                  </div>
+                </form>
+              ) : null}
+            </Card>
           </li>
         ))}
-        {bills.data?.length === 0 ? (
-          <p className="py-8 text-center text-sm text-charcoal/60 dark:text-linen/60">
-            {t("bills.empty")}
-          </p>
-        ) : null}
       </ul>
+      {bills.data?.length === 0 ? <EmptyState message={t("bills.empty")} /> : null}
     </div>
   );
 }

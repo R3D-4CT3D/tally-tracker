@@ -3,9 +3,11 @@ import type { FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+import { Card } from "../components/Card";
 import { ErrorBanner } from "../components/ErrorBanner";
 import { FormField } from "../components/FormField";
 import { PrimaryButton } from "../components/PrimaryButton";
+import { SecondaryButton } from "../components/SecondaryButton";
 import { SelectField } from "../components/SelectField";
 import { useAccounts } from "../features/accounts/hooks";
 import { useCategories } from "../features/categories/hooks";
@@ -135,35 +137,33 @@ export function TransactionFormPage() {
 
   if (rulePrompt) {
     return (
-      <div className="mx-auto max-w-xl rounded-2xl border border-charcoal/10 bg-white/60 p-6 dark:border-linen/10 dark:bg-white/[0.03]">
-        <h2 className="font-display text-lg font-semibold">{t("rules.createFromCorrectionTitle")}</h2>
-        <p className="mt-2 text-sm text-charcoal/70 dark:text-linen/70">
+      <Card size="form" className="mx-auto max-w-xl">
+        <h2 className="font-display text-lg font-semibold">
+          {t("rules.createFromCorrectionTitle")}
+        </h2>
+        <p className="mt-2 text-sm text-text-primary/70">
           {t("rules.createFromCorrectionBody", { description: rulePrompt.description })}
         </p>
         <ErrorBanner message={errorMessage(createRule.error, t("common.genericError"))} />
         <div className="mt-4 flex gap-3">
           <PrimaryButton
             type="button"
-            className="w-auto px-4"
+            className="px-4"
             disabled={createRule.isPending}
             onClick={handleCreateRuleFromCorrection}
           >
             {t("rules.createFromCorrectionConfirm")}
           </PrimaryButton>
-          <button
-            type="button"
-            onClick={() => navigate("/transactions")}
-            className="rounded-lg border border-charcoal/20 px-4 py-2.5 text-sm font-medium dark:border-linen/20"
-          >
+          <SecondaryButton onClick={() => navigate("/transactions")}>
             {t("rules.createFromCorrectionSkip")}
-          </button>
+          </SecondaryButton>
         </div>
-      </div>
+      </Card>
     );
   }
 
   if (isEditing && existing.isLoading) {
-    return <p className="text-sm text-charcoal/60 dark:text-linen/60">{t("common.loading")}</p>;
+    return <p className="text-sm text-text-primary/60">{t("common.loading")}</p>;
   }
 
   return (
@@ -246,20 +246,12 @@ export function TransactionFormPage() {
         />
         <ErrorBanner message={errorMessage(activeMutation.error, t("common.genericError"))} />
         <div className="flex gap-3">
-          <PrimaryButton
-            type="submit"
-            disabled={activeMutation.isPending}
-            className="w-auto px-4"
-          >
+          <PrimaryButton type="submit" disabled={activeMutation.isPending} className="px-4">
             {isEditing ? t("transactions.saveButton") : t("transactions.createButton")}
           </PrimaryButton>
-          <button
-            type="button"
-            onClick={() => navigate("/transactions")}
-            className="rounded-lg border border-charcoal/20 px-4 py-2.5 text-sm font-medium dark:border-linen/20"
-          >
+          <SecondaryButton onClick={() => navigate("/transactions")}>
             {t("common.cancel")}
-          </button>
+          </SecondaryButton>
         </div>
       </form>
     </div>

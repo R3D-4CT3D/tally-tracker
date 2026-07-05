@@ -42,6 +42,8 @@
   "nav": {
     "greeting": "Hi, {{name}}",
     "logout": "Log out",
+    "switchToLight": "Switch to light theme",
+    "switchToDark": "Switch to dark theme",
     "dashboard": "Dashboard",
     "transactions": "Transactions",
     "accounts": "Accounts",
@@ -55,7 +57,31 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome, {{name}}",
-    "comingSoon": "Your household's full dashboard is coming soon."
+    "comingSoon": "Your household's full dashboard is coming soon.",
+    "cashLabel": "Cash",
+    "debtLabel": "Debt",
+    "netLabel": "Net position",
+    "noSnapshotsYet": "No balance history yet — the nightly snapshot job hasn't run yet. Check back tomorrow.",
+    "sinceYouWereHere": "Since you were here",
+    "allCaughtUp": "All caught up — nothing new since your last visit.",
+    "newTransactionsCount": "{{count}} new transaction",
+    "newTransactionsCount_other": "{{count}} new transactions",
+    "upcomingBillsCount": "{{count}} bill due in the next 14 days",
+    "upcomingBillsCount_other": "{{count}} bills due in the next 14 days",
+    "uncategorizedCount": "{{count}} uncategorized transaction",
+    "uncategorizedCount_other": "{{count}} uncategorized transactions",
+    "debtBossesTitle": "Debts",
+    "noDebts": "No debts tracked yet.",
+    "addDebtCta": "Add a debt",
+    "nextDueValue": "next due {{date}}",
+    "questsTitle": "Quests",
+    "noGoals": "No savings goals yet.",
+    "addGoalCta": "Add a goal",
+    "projectedCompletion": "Projected to finish {{date}}",
+    "noProjectionYet": "Add a contribution to see a projection.",
+    "monthSpendingTitle": "This month's spending",
+    "noSpendingYet": "No spending logged this month yet.",
+    "importCta": "Import transactions"
   },
   "accounts": {
     "title": "Accounts",
@@ -70,6 +96,7 @@
     "saveButton": "Save changes",
     "showArchived": "Show archived accounts",
     "archivedBadge": "Archived",
+    "empty": "No accounts yet — add one to start tracking your money.",
     "types": {
       "checking": "Checking",
       "savings": "Savings",
@@ -85,7 +112,8 @@
     "parentLabel": "Parent category",
     "noParent": "None (top-level)",
     "createButton": "Create category",
-    "saveButton": "Save changes"
+    "saveButton": "Save changes",
+    "empty": "No categories yet — add one to start organizing your spending."
   },
   "transactions": {
     "title": "Transactions",

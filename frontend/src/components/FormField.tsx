@@ -1,5 +1,7 @@
 import type { InputHTMLAttributes } from "react";
 
+import { FIELD_CHROME_CLASSNAME } from "./fieldChrome";
+
 interface FormFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   name: string;
@@ -8,15 +10,10 @@ interface FormFieldProps extends InputHTMLAttributes<HTMLInputElement> {
 export function FormField({ label, name, ...inputProps }: FormFieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={name} className="text-sm font-medium text-charcoal/80 dark:text-linen/80">
+      <label htmlFor={name} className="text-sm font-medium text-text-primary/80">
         {label}
       </label>
-      <input
-        id={name}
-        name={name}
-        {...inputProps}
-        className="rounded-lg border border-charcoal/15 bg-white/50 px-3 py-2 text-base text-charcoal outline-none transition-colors focus:border-ember focus:ring-2 focus:ring-ember/30 dark:border-linen/15 dark:bg-black/20 dark:text-linen"
-      />
+      <input id={name} name={name} {...inputProps} className={FIELD_CHROME_CLASSNAME} />
     </div>
   );
 }

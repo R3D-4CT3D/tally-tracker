@@ -1,3 +1,27 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Semantic color tokens, resolved per-theme. tailwind.config.ts wires these
+ * into `bg-surface`, `border-border/10`, `text-text-primary/70`, etc. via
+ * the `rgb(var(--x) / <alpha-value>)` pattern -- one class works in both
+ * themes without a `dark:` twin at every call site. Values are RGB triplets
+ * (no commas) matching frontend/src/design-system/tokens.ts's charcoal/linen
+ * ramps -- keep the two in sync if the ramps ever change.
+ */
+:root {
+  --color-surface: 250 246 241; /* linen-50 */
+  --color-surface-card: 243 236 227; /* linen-100 */
+  --color-surface-subtle: 250 246 241; /* linen-50 */
+  --color-border: 28 25 23; /* charcoal-950 */
+  --color-text-primary: 28 25 23; /* charcoal-950 */
+}
+
+.dark {
+  --color-surface: 28 25 23; /* charcoal-950 */
+  --color-surface-card: 36 31 26; /* charcoal-900 */
+  --color-surface-subtle: 54 46 40; /* charcoal-800 */
+  --color-border: 250 246 241; /* linen-50 */
+  --color-text-primary: 250 246 241; /* linen-50 */
+}
