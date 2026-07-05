@@ -35,6 +35,7 @@ class MeResponse(BaseModel):
     role: str
     household_id: UUID
     household_name: str
+    last_login_at: datetime | None
 
 
 class InviteCreateResponse(BaseModel):

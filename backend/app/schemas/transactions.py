@@ -57,6 +57,11 @@ class TransactionListParams(BaseModel):
     category_id: UUID | None = None
     uncategorized: bool = False
     debt_id: UUID | None = None
+    # Deliberately separate from date_from/date_to: those filter the
+    # transaction's own ledger `date`, this filters `created_at` -- i.e. when
+    # the row was entered/imported, not the date it's dated for. Powers the
+    # dashboard's "since you were here" (M5), which needs the latter.
+    created_after: datetime | None = None
     search: str | None = Field(default=None, max_length=200)
     cursor: str | None = None
     limit: int = Field(default=25, ge=1, le=100)
@@ -65,3 +70,22 @@ class TransactionListParams(BaseModel):
 class TransactionListResponse(BaseModel):
     items: list[TransactionOut]
     next_cursor: str | None
+
+
+class TransactionCountParams(BaseModel):
+    """Same filter surface as TransactionListParams minus pagination --
+    count_transactions() reuses the shared WHERE-building helper both share.
+    """
+
+    date_from: date_type | None = None
+    date_to: date_type | None = None
+    account_id: UUID | None = None
+    category_id: UUID | None = None
+    uncategorized: bool = False
+    debt_id: UUID | None = None
+    created_after: datetime | None = None
+    search: str | None = Field(default=None, max_length=200)
+
+
+class TransactionCountResponse(BaseModel):
+    count: int

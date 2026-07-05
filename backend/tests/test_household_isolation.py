@@ -494,3 +494,43 @@ async def test_transaction_cannot_reference_another_households_debt(
         headers={"X-CSRF-Token": session_b.csrf_token},
     )
     assert update_resp.status_code == 404
+
+
+async def test_uncategorized_count_is_household_scoped(
+    client: AsyncClient, db_session: AsyncSession, fake_redis: Redis
+) -> None:
+    _, _, _, session_a = await seed_household(
+        db_session, fake_redis, household_name="Household A", owner_email="ownera7@example.com"
+    )
+    _, _, _, session_b = await seed_household(
+        db_session, fake_redis, household_name="Household B", owner_email="ownerb7@example.com"
+    )
+
+    apply_session_cookies(client, session_a)
+    account_a_resp = await client.post(
+        "/api/v1/accounts",
+        json={
+            "name": "A's Checking",
+            "type": "checking",
+            "balance_cents": 0,
+            "color": "#336699",
+            "icon": "bank",
+        },
+        headers={"X-CSRF-Token": session_a.csrf_token},
+    )
+    account_a_id = account_a_resp.json()["id"]
+    await client.post(
+        "/api/v1/transactions",
+        json={
+            "account_id": account_a_id,
+            "date": "2026-01-15",
+            "amount_cents": -500,
+            "description": "A's uncategorized transaction",
+        },
+        headers={"X-CSRF-Token": session_a.csrf_token},
+    )
+
+    apply_session_cookies(client, session_b)
+    count_as_b = await client.get("/api/v1/transactions/uncategorized-count")
+    assert count_as_b.status_code == 200
+    assert count_as_b.json()["count"] == 0

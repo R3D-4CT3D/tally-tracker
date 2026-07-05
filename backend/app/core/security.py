@@ -47,6 +47,10 @@ class SessionData(BaseModel):
     csrf_token: str
     created_at: datetime
     absolute_expires_at: datetime
+    # The user's *previous* last_login_at, captured once at login and baked
+    # into the session for its whole lifetime (M5) -- "since you were here"
+    # should mean since this session started, not a value that moves mid-session.
+    last_login_at: datetime | None = None
 
 
 def _session_key(session_id: str) -> str:
@@ -68,6 +72,7 @@ async def create_session(
     display_name: str,
     idle_days: int,
     absolute_days: int,
+    last_login_at: datetime | None = None,
 ) -> SessionData:
     """Always mints a brand-new session id — never reuses/extends an existing
     one — so a fresh login always rotates the session (mitigates fixation).
@@ -84,6 +89,7 @@ async def create_session(
         csrf_token=secrets.token_urlsafe(32),
         created_at=now,
         absolute_expires_at=now + timedelta(days=absolute_days),
+        last_login_at=last_login_at,
     )
     idle_seconds = idle_days * 86400
     async with redis.pipeline(transaction=True) as pipe:

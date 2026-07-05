@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +11,16 @@ from app.models.household_member import HouseholdMember
 from app.models.user import User
 
 settings = get_settings()
+
+
+def record_login(user: User) -> datetime | None:
+    """Captures the *previous* last_login_at (what "since you were here"
+    must compare against) before overwriting it with now() -- the caller is
+    responsible for flushing/committing the mutated `user`.
+    """
+    previous = user.last_login_at
+    user.last_login_at = datetime.now(UTC)
+    return previous
 
 
 async def authenticate_user(
@@ -35,7 +47,12 @@ async def authenticate_user(
 
 
 async def create_session_for_user(
-    redis: Redis, user: User, member: HouseholdMember, household: Household
+    redis: Redis,
+    user: User,
+    member: HouseholdMember,
+    household: Household,
+    *,
+    last_login_at: datetime | None = None,
 ) -> SessionData:
     return await create_session(
         redis,
@@ -47,4 +64,5 @@ async def create_session_for_user(
         display_name=user.display_name,
         idle_days=settings.session_idle_days,
         absolute_days=settings.session_absolute_days,
+        last_login_at=last_login_at,
     )

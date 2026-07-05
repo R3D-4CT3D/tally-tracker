@@ -2,13 +2,20 @@ import base64
 import hashlib
 import uuid
 from datetime import date as date_type
+from datetime import datetime
+from typing import Any
 
-from sqlalchemy import select, tuple_
+from sqlalchemy import Select, func, select, tuple_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.transaction import Transaction
-from app.schemas.transactions import TransactionCreate, TransactionListParams, TransactionUpdate
+from app.schemas.transactions import (
+    TransactionCountParams,
+    TransactionCreate,
+    TransactionListParams,
+    TransactionUpdate,
+)
 from app.services.accounts import get_account
 from app.services.categories import get_category
 from app.services.debts import adjust_debt_balance_for_transaction, get_debt
@@ -253,25 +260,55 @@ async def delete_transaction(
     return True
 
 
+def _apply_common_filters[SelectT: Select[Any]](
+    stmt: SelectT,
+    *,
+    date_from: date_type | None,
+    date_to: date_type | None,
+    account_id: uuid.UUID | None,
+    category_id: uuid.UUID | None,
+    uncategorized: bool,
+    debt_id: uuid.UUID | None,
+    created_after: datetime | None,
+    search: str | None,
+) -> SelectT:
+    """Shared between list_transactions and count_transactions so the two
+    never drift out of sync with each other's filter semantics.
+    """
+    if date_from is not None:
+        stmt = stmt.where(Transaction.date >= date_from)
+    if date_to is not None:
+        stmt = stmt.where(Transaction.date <= date_to)
+    if account_id is not None:
+        stmt = stmt.where(Transaction.account_id == account_id)
+    if uncategorized:
+        stmt = stmt.where(Transaction.category_id.is_(None))
+    elif category_id is not None:
+        stmt = stmt.where(Transaction.category_id == category_id)
+    if debt_id is not None:
+        stmt = stmt.where(Transaction.debt_id == debt_id)
+    if created_after is not None:
+        stmt = stmt.where(Transaction.created_at >= created_after)
+    if search:
+        stmt = stmt.where(Transaction.description_display.ilike(f"%{search}%"))
+    return stmt
+
+
 async def list_transactions(
     db: AsyncSession, *, household_id: uuid.UUID, params: TransactionListParams
 ) -> tuple[list[Transaction], str | None]:
     stmt = select(Transaction).where(Transaction.household_id == household_id)
-
-    if params.date_from is not None:
-        stmt = stmt.where(Transaction.date >= params.date_from)
-    if params.date_to is not None:
-        stmt = stmt.where(Transaction.date <= params.date_to)
-    if params.account_id is not None:
-        stmt = stmt.where(Transaction.account_id == params.account_id)
-    if params.uncategorized:
-        stmt = stmt.where(Transaction.category_id.is_(None))
-    elif params.category_id is not None:
-        stmt = stmt.where(Transaction.category_id == params.category_id)
-    if params.debt_id is not None:
-        stmt = stmt.where(Transaction.debt_id == params.debt_id)
-    if params.search:
-        stmt = stmt.where(Transaction.description_display.ilike(f"%{params.search}%"))
+    stmt = _apply_common_filters(
+        stmt,
+        date_from=params.date_from,
+        date_to=params.date_to,
+        account_id=params.account_id,
+        category_id=params.category_id,
+        uncategorized=params.uncategorized,
+        debt_id=params.debt_id,
+        created_after=params.created_after,
+        search=params.search,
+    )
 
     if params.cursor:
         cursor_date, cursor_id = decode_cursor(params.cursor)
@@ -293,3 +330,29 @@ async def list_transactions(
         next_cursor = encode_cursor(last.date, last.id)
 
     return rows, next_cursor
+
+
+async def count_transactions(
+    db: AsyncSession, *, household_id: uuid.UUID, params: TransactionCountParams
+) -> int:
+    """A dedicated COUNT query rather than piggybacking a total on
+    list_transactions's response -- that endpoint is hot/frequently-polled
+    (the transactions page), and only the dashboard's "uncategorized count"
+    widget (M5) needs a total.
+    """
+    stmt = select(func.count()).select_from(Transaction).where(
+        Transaction.household_id == household_id
+    )
+    stmt = _apply_common_filters(
+        stmt,
+        date_from=params.date_from,
+        date_to=params.date_to,
+        account_id=params.account_id,
+        category_id=params.category_id,
+        uncategorized=params.uncategorized,
+        debt_id=params.debt_id,
+        created_after=params.created_after,
+        search=params.search,
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one()

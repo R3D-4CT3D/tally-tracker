@@ -13,7 +13,7 @@ from app.core.security import clear_session_cookies, delete_session, set_session
 from app.models.household import Household
 from app.schemas.auth import LoginRequest, MeResponse
 from app.services.audit import record_audit_event
-from app.services.auth import authenticate_user, create_session_for_user
+from app.services.auth import authenticate_user, create_session_for_user, record_login
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -47,6 +47,8 @@ async def login(
     household = await db.get(Household, member.household_id)
     assert household is not None  # FK guarantees this; narrows the type for mypy
 
+    previous_last_login = record_login(user)
+
     await record_audit_event(
         db,
         household_id=household.id,
@@ -58,7 +60,9 @@ async def login(
     )
     await db.commit()
 
-    session = await create_session_for_user(redis, user, member, household)
+    session = await create_session_for_user(
+        redis, user, member, household, last_login_at=previous_last_login
+    )
     set_session_cookies(response, session)
     return {"status": "ok"}
 
@@ -93,4 +97,5 @@ async def me(current_user: CurrentUser) -> MeResponse:
         role=current_user.role,
         household_id=uuid.UUID(current_user.household_id),
         household_name=current_user.household_name,
+        last_login_at=current_user.last_login_at,
     )

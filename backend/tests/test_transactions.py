@@ -1,7 +1,12 @@
+import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from httpx import AsyncClient
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.transaction import Transaction
 from tests.conftest import SETUP_PAYLOAD
 
 
@@ -239,3 +244,70 @@ async def test_list_pagination_cursor_walks_all_pages_without_overlap(client: As
     all_resp = await client.get("/api/v1/transactions?limit=100")
     all_dates = [item["date"] for item in all_resp.json()["items"]]
     assert all_dates == sorted(all_dates, reverse=True)
+
+
+async def test_list_filters_by_created_after(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """created_after filters on created_at (when the row was entered), not
+    the ledger `date` -- backdate one transaction's created_at directly
+    (same pattern as test_import_batches.py's undo-window test) rather than
+    adding a time-mocking dependency.
+    """
+    await client.post("/api/v1/setup", json=SETUP_PAYLOAD)
+    account_id = await _create_account(client)
+    old = await _create_transaction(client, account_id=account_id, description="Old entry")
+    new = await _create_transaction(client, account_id=account_id, description="New entry")
+
+    stmt = select(Transaction).where(Transaction.id == uuid.UUID(old["id"]))
+    result = await db_session.execute(stmt)
+    old_row = result.scalar_one()
+    old_row.created_at = datetime.now(UTC) - timedelta(days=2)
+    await db_session.commit()
+
+    boundary = (datetime.now(UTC) - timedelta(days=1)).isoformat()
+    # Use httpx's `params` (not an f-string URL) so the `+` in the UTC offset
+    # gets properly percent-encoded -- embedded raw in a query string, `+`
+    # is interpreted as a literal space and fails datetime parsing (422).
+    resp = await client.get("/api/v1/transactions", params={"created_after": boundary})
+    assert resp.status_code == 200
+    descriptions = [i["description_raw"] for i in resp.json()["items"]]
+    assert descriptions == [new["description_raw"]]
+    assert old["description_raw"] not in descriptions
+
+
+async def test_generic_count_endpoint_respects_created_after(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    await client.post("/api/v1/setup", json=SETUP_PAYLOAD)
+    account_id = await _create_account(client)
+    old = await _create_transaction(client, account_id=account_id, description="Old entry")
+    await _create_transaction(client, account_id=account_id, description="New entry")
+
+    stmt = select(Transaction).where(Transaction.id == uuid.UUID(old["id"]))
+    result = await db_session.execute(stmt)
+    old_row = result.scalar_one()
+    old_row.created_at = datetime.now(UTC) - timedelta(days=2)
+    await db_session.commit()
+
+    boundary = (datetime.now(UTC) - timedelta(days=1)).isoformat()
+    resp = await client.get("/api/v1/transactions/count", params={"created_after": boundary})
+    assert resp.status_code == 200
+    assert resp.json()["count"] == 1
+
+
+async def test_uncategorized_count_reflects_only_uncategorized_transactions(
+    client: AsyncClient,
+) -> None:
+    await client.post("/api/v1/setup", json=SETUP_PAYLOAD)
+    account_id = await _create_account(client)
+    dining_id = await _get_category_id(client, "Dining")
+    await _create_transaction(
+        client, account_id=account_id, description="Categorized", category_id=dining_id
+    )
+    await _create_transaction(client, account_id=account_id, description="Uncategorized 1")
+    await _create_transaction(client, account_id=account_id, description="Uncategorized 2")
+
+    resp = await client.get("/api/v1/transactions/uncategorized-count")
+    assert resp.status_code == 200
+    assert resp.json()["count"] == 2

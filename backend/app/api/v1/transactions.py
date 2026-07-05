@@ -1,5 +1,6 @@
 import uuid
 from datetime import date as date_type
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -8,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import CurrentUser, verify_csrf
 from app.core.db import get_db
 from app.schemas.transactions import (
+    TransactionCountParams,
+    TransactionCountResponse,
     TransactionCreate,
     TransactionListParams,
     TransactionListResponse,
@@ -17,6 +20,7 @@ from app.schemas.transactions import (
 from app.services.transactions import (
     DuplicateTransactionError,
     InvalidReferenceError,
+    count_transactions,
     create_transaction,
     delete_transaction,
     get_transaction,
@@ -62,6 +66,8 @@ async def list_transactions_route(
     account_id: uuid.UUID | None = None,
     category_id: uuid.UUID | None = None,
     uncategorized: bool = False,
+    debt_id: uuid.UUID | None = None,
+    created_after: datetime | None = None,
     search: str | None = Query(default=None, max_length=200),
     cursor: str | None = None,
     limit: int = Query(default=25, ge=1, le=100),
@@ -72,6 +78,8 @@ async def list_transactions_route(
         account_id=account_id,
         category_id=category_id,
         uncategorized=uncategorized,
+        debt_id=debt_id,
+        created_after=created_after,
         search=search,
         cursor=cursor,
         limit=limit,
@@ -82,6 +90,52 @@ async def list_transactions_route(
     return TransactionListResponse(
         items=[TransactionOut.model_validate(t) for t in rows], next_cursor=next_cursor
     )
+
+
+@router.get("/count", response_model=TransactionCountResponse)
+async def count_transactions_route(
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    date_from: date_type | None = None,
+    date_to: date_type | None = None,
+    account_id: uuid.UUID | None = None,
+    category_id: uuid.UUID | None = None,
+    uncategorized: bool = False,
+    debt_id: uuid.UUID | None = None,
+    created_after: datetime | None = None,
+    search: str | None = Query(default=None, max_length=200),
+) -> TransactionCountResponse:
+    """Generic count surface -- the dashboard's "since you were here" (M5)
+    uses `created_after` here, distinct from /uncategorized-count's fixed
+    uncategorized=True shortcut (kept as-is since it's already relied on).
+    """
+    params = TransactionCountParams(
+        date_from=date_from,
+        date_to=date_to,
+        account_id=account_id,
+        category_id=category_id,
+        uncategorized=uncategorized,
+        debt_id=debt_id,
+        created_after=created_after,
+        search=search,
+    )
+    count = await count_transactions(
+        db, household_id=uuid.UUID(current_user.household_id), params=params
+    )
+    return TransactionCountResponse(count=count)
+
+
+@router.get("/uncategorized-count", response_model=TransactionCountResponse)
+async def uncategorized_count_route(
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TransactionCountResponse:
+    count = await count_transactions(
+        db,
+        household_id=uuid.UUID(current_user.household_id),
+        params=TransactionCountParams(uncategorized=True),
+    )
+    return TransactionCountResponse(count=count)
 
 
 @router.get("/{transaction_id}", response_model=TransactionOut)

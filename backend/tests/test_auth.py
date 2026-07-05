@@ -69,6 +69,44 @@ async def test_logout_requires_csrf_then_clears_session(client: AsyncClient) -> 
     assert after_logout.status_code == 401
 
 
+async def test_last_login_at_surfaces_the_previous_login_not_the_current_one(
+    client: AsyncClient,
+) -> None:
+    """/setup auto-logs-in but never counts as a "login" for this field (it's
+    an entirely separate flow) -- last_login_at should only start moving once
+    a real /login happens, and each login should expose the *previous*
+    value (what "since you were here" needs), not the one it just wrote.
+    """
+    await client.post("/api/v1/setup", json=SETUP_PAYLOAD)
+    after_setup = await client.get("/api/v1/auth/me")
+    assert after_setup.json()["last_login_at"] is None
+    await _logout(client)
+
+    first_login = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": SETUP_PAYLOAD["owner_email"],
+            "password": SETUP_PAYLOAD["owner_password"],
+        },
+    )
+    assert first_login.status_code == 200
+    # First-ever real login: there's no prior login to report yet.
+    after_first_login = await client.get("/api/v1/auth/me")
+    assert after_first_login.json()["last_login_at"] is None
+    await _logout(client)
+
+    second_login = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": SETUP_PAYLOAD["owner_email"],
+            "password": SETUP_PAYLOAD["owner_password"],
+        },
+    )
+    assert second_login.status_code == 200
+    after_second_login = await client.get("/api/v1/auth/me")
+    assert after_second_login.json()["last_login_at"] is not None
+
+
 async def test_login_rate_limit_is_keyed_by_ip_and_account(client: AsyncClient) -> None:
     await client.post("/api/v1/setup", json=SETUP_PAYLOAD)
     await _logout(client)
