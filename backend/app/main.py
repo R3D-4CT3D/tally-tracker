@@ -5,7 +5,11 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.v1.accounts import router as accounts_router
 from app.api.v1.auth import router as auth_router
+from app.api.v1.balance_snapshots import router as balance_snapshots_router
+from app.api.v1.bills import router as bills_router
 from app.api.v1.categories import router as categories_router
+from app.api.v1.debts import router as debts_router
+from app.api.v1.goals import router as goals_router
 from app.api.v1.health import router as health_router
 from app.api.v1.household import router as household_router
 from app.api.v1.import_profiles import router as import_profiles_router
@@ -41,3 +45,7 @@ app.include_router(transactions_router, prefix="/api/v1")
 app.include_router(imports_router, prefix="/api/v1")
 app.include_router(import_profiles_router, prefix="/api/v1")
 app.include_router(rules_router, prefix="/api/v1")
+app.include_router(debts_router, prefix="/api/v1")
+app.include_router(bills_router, prefix="/api/v1")
+app.include_router(goals_router, prefix="/api/v1")
+app.include_router(balance_snapshots_router, prefix="/api/v1")

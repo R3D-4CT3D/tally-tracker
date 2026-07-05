@@ -333,3 +333,164 @@ async def test_transaction_cannot_reference_another_households_account_or_catego
         headers={"X-CSRF-Token": session_b.csrf_token},
     )
     assert update_resp.status_code == 404
+
+
+async def test_debts_bills_goals_are_household_scoped(
+    client: AsyncClient, db_session: AsyncSession, fake_redis: Redis
+) -> None:
+    """M4 entities must follow the same isolation shape as M2/M3: hidden from
+    list, 404 on direct get-by-id, and 404 when B tries to mutate A's rows
+    even by guessing A's entity ids.
+    """
+    _, _, _, session_a = await seed_household(
+        db_session, fake_redis, household_name="Household A", owner_email="ownera5@example.com"
+    )
+    _, _, _, session_b = await seed_household(
+        db_session, fake_redis, household_name="Household B", owner_email="ownerb5@example.com"
+    )
+
+    apply_session_cookies(client, session_a)
+    debt_resp = await client.post(
+        "/api/v1/debts",
+        json={
+            "name": "A's Card",
+            "type": "credit_card",
+            "original_balance_cents": 10000,
+            "current_balance_cents": 10000,
+            "apr_bps": 1999,
+            "min_payment_cents": 2500,
+            "due_day": 15,
+        },
+        headers={"X-CSRF-Token": session_a.csrf_token},
+    )
+    debt_a = debt_resp.json()
+
+    bill_resp = await client.post(
+        "/api/v1/bills",
+        json={
+            "name": "A's Bill",
+            "amount_cents": 5000,
+            "frequency": "monthly",
+            "due_day": 1,
+            "next_due_date": "2026-01-01",
+        },
+        headers={"X-CSRF-Token": session_a.csrf_token},
+    )
+    bill_a = bill_resp.json()
+
+    goal_resp = await client.post(
+        "/api/v1/goals",
+        json={"name": "A's Goal", "target_cents": 100000, "icon": "🐷", "color": "#059669"},
+        headers={"X-CSRF-Token": session_a.csrf_token},
+    )
+    goal_a = goal_resp.json()
+
+    apply_session_cookies(client, session_b)
+
+    assert (await client.get("/api/v1/debts")).json() == []
+    assert (await client.get(f"/api/v1/debts/{debt_a['id']}")).status_code == 404
+    assert (
+        await client.patch(
+            f"/api/v1/debts/{debt_a['id']}",
+            json={"name": "Hijacked"},
+            headers={"X-CSRF-Token": session_b.csrf_token},
+        )
+    ).status_code == 404
+
+    assert (await client.get("/api/v1/bills")).json() == []
+    assert (await client.get(f"/api/v1/bills/{bill_a['id']}")).status_code == 404
+    assert (
+        await client.patch(
+            f"/api/v1/bills/{bill_a['id']}",
+            json={"name": "Hijacked"},
+            headers={"X-CSRF-Token": session_b.csrf_token},
+        )
+    ).status_code == 404
+
+    assert (await client.get("/api/v1/goals")).json() == []
+    assert (await client.get(f"/api/v1/goals/{goal_a['id']}")).status_code == 404
+    assert (
+        await client.patch(
+            f"/api/v1/goals/{goal_a['id']}",
+            json={"name": "Hijacked"},
+            headers={"X-CSRF-Token": session_b.csrf_token},
+        )
+    ).status_code == 404
+
+
+async def test_transaction_cannot_reference_another_households_debt(
+    client: AsyncClient, db_session: AsyncSession, fake_redis: Redis
+) -> None:
+    """transactions.debt_id is a new client-supplied FK reference, same IDOR
+    class as account_id/category_id -- must be validated against the
+    caller's own household, not just accepted and stored.
+    """
+    _, _, _, session_a = await seed_household(
+        db_session, fake_redis, household_name="Household A", owner_email="ownera6@example.com"
+    )
+    _, _, _, session_b = await seed_household(
+        db_session, fake_redis, household_name="Household B", owner_email="ownerb6@example.com"
+    )
+
+    apply_session_cookies(client, session_a)
+    debt_resp = await client.post(
+        "/api/v1/debts",
+        json={
+            "name": "A's Card",
+            "type": "credit_card",
+            "original_balance_cents": 10000,
+            "current_balance_cents": 10000,
+            "apr_bps": 1999,
+            "min_payment_cents": 2500,
+            "due_day": 15,
+        },
+        headers={"X-CSRF-Token": session_a.csrf_token},
+    )
+    debt_a_id = debt_resp.json()["id"]
+
+    apply_session_cookies(client, session_b)
+    account_resp = await client.post(
+        "/api/v1/accounts",
+        json={
+            "name": "B's Checking",
+            "type": "checking",
+            "balance_cents": 0,
+            "color": "#336699",
+            "icon": "bank",
+        },
+        headers={"X-CSRF-Token": session_b.csrf_token},
+    )
+    account_b_id = account_resp.json()["id"]
+
+    create_resp = await client.post(
+        "/api/v1/transactions",
+        json={
+            "account_id": account_b_id,
+            "date": "2026-01-15",
+            "amount_cents": -500,
+            "description": "Cross-household debt attempt",
+            "debt_id": debt_a_id,
+        },
+        headers={"X-CSRF-Token": session_b.csrf_token},
+    )
+    assert create_resp.status_code == 404
+
+    valid_resp = await client.post(
+        "/api/v1/transactions",
+        json={
+            "account_id": account_b_id,
+            "date": "2026-01-15",
+            "amount_cents": -500,
+            "description": "B's real transaction",
+        },
+        headers={"X-CSRF-Token": session_b.csrf_token},
+    )
+    assert valid_resp.status_code == 201
+    transaction_b_id = valid_resp.json()["id"]
+
+    update_resp = await client.patch(
+        f"/api/v1/transactions/{transaction_b_id}",
+        json={"debt_id": debt_a_id},
+        headers={"X-CSRF-Token": session_b.csrf_token},
+    )
+    assert update_resp.status_code == 404

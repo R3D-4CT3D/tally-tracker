@@ -12,6 +12,7 @@ class TransactionCreate(BaseModel):
     description: str = Field(min_length=1, max_length=500)
     category_id: UUID | None = None
     notes: str | None = Field(default=None, max_length=5000)
+    debt_id: UUID | None = None
 
 
 class TransactionUpdate(BaseModel):
@@ -28,6 +29,7 @@ class TransactionUpdate(BaseModel):
     description: str | None = Field(default=None, min_length=1, max_length=500)
     category_id: UUID | None = None
     notes: str | None = Field(default=None, max_length=5000)
+    debt_id: UUID | None = None
 
 
 class TransactionOut(BaseModel):
@@ -43,6 +45,7 @@ class TransactionOut(BaseModel):
     notes: str | None
     source: str
     created_by: UUID
+    debt_id: UUID | None
     created_at: datetime
     updated_at: datetime
 
@@ -53,6 +56,7 @@ class TransactionListParams(BaseModel):
     account_id: UUID | None = None
     category_id: UUID | None = None
     uncategorized: bool = False
+    debt_id: UUID | None = None
     search: str | None = Field(default=None, max_length=200)
     cursor: str | None = None
     limit: int = Field(default=25, ge=1, le=100)

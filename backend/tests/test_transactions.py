@@ -178,6 +178,36 @@ async def test_list_search_matches_description(client: AsyncClient) -> None:
     assert items[0]["description_raw"] == "Grocery Store"
 
 
+async def test_create_transaction_with_debt_id_populates_it(client: AsyncClient) -> None:
+    await client.post("/api/v1/setup", json=SETUP_PAYLOAD)
+    account_id = await _create_account(client)
+    debt_resp = await client.post(
+        "/api/v1/debts",
+        json={
+            "name": "Visa",
+            "type": "credit_card",
+            "original_balance_cents": 10000,
+            "current_balance_cents": 10000,
+            "apr_bps": 1999,
+            "min_payment_cents": 2500,
+            "due_day": 15,
+        },
+        headers=_csrf_headers(client),
+    )
+    debt_id = debt_resp.json()["id"]
+
+    created = await _create_transaction(client, account_id=account_id, debt_id=debt_id)
+    assert created["debt_id"] == debt_id
+
+    updated = await client.patch(
+        f"/api/v1/transactions/{created['id']}",
+        json={"debt_id": None},
+        headers=_csrf_headers(client),
+    )
+    assert updated.status_code == 200
+    assert updated.json()["debt_id"] is None
+
+
 async def test_list_pagination_cursor_walks_all_pages_without_overlap(client: AsyncClient) -> None:
     await client.post("/api/v1/setup", json=SETUP_PAYLOAD)
     account_id = await _create_account(client)

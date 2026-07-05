@@ -11,6 +11,7 @@ from app.models.transaction import Transaction
 from app.schemas.transactions import TransactionCreate, TransactionListParams, TransactionUpdate
 from app.services.accounts import get_account
 from app.services.categories import get_category
+from app.services.debts import adjust_debt_balance_for_transaction, get_debt
 
 _DUPLICATE_MESSAGE = (
     "A transaction with the same account, date, amount, and description already exists"
@@ -57,6 +58,14 @@ async def _validate_category_reference(
         raise InvalidReferenceError("Category not found")
 
 
+async def _validate_debt_reference(
+    db: AsyncSession, *, household_id: uuid.UUID, debt_id: uuid.UUID
+) -> None:
+    debt = await get_debt(db, household_id=household_id, debt_id=debt_id)
+    if debt is None:
+        raise InvalidReferenceError("Debt not found")
+
+
 def normalize_description(text: str) -> str:
     return " ".join(text.strip().lower().split())
 
@@ -97,6 +106,8 @@ async def create_transaction(
         await _validate_category_reference(
             db, household_id=household_id, category_id=payload.category_id
         )
+    if payload.debt_id is not None:
+        await _validate_debt_reference(db, household_id=household_id, debt_id=payload.debt_id)
     dedupe_hash = compute_dedupe_hash(
         household_id=household_id,
         account_id=payload.account_id,
@@ -116,6 +127,7 @@ async def create_transaction(
         source="manual",
         dedupe_hash=dedupe_hash,
         created_by=created_by,
+        debt_id=payload.debt_id,
     )
     db.add(transaction)
     try:
@@ -123,6 +135,10 @@ async def create_transaction(
     except IntegrityError as exc:
         await db.rollback()
         raise DuplicateTransactionError(_DUPLICATE_MESSAGE) from exc
+    if payload.debt_id is not None:
+        await adjust_debt_balance_for_transaction(
+            db, household_id=household_id, debt_id=payload.debt_id, delta_cents=payload.amount_cents
+        )
     return transaction
 
 
@@ -159,6 +175,17 @@ async def update_transaction(
         await _validate_category_reference(
             db, household_id=household_id, category_id=update_data["category_id"]
         )
+    if "debt_id" in update_data and update_data["debt_id"] is not None:
+        await _validate_debt_reference(
+            db, household_id=household_id, debt_id=update_data["debt_id"]
+        )
+
+    # Captured before mutation: reversing/reapplying the debt-balance
+    # adjustment below needs the *old* debt_id/amount, which setattr()
+    # overwrites in place.
+    old_debt_id = transaction.debt_id
+    old_amount_cents = transaction.amount_cents
+    debt_adjustment_relevant = {"debt_id", "amount_cents"} & update_data.keys()
 
     description = update_data.pop("description", None)
     if description is not None:
@@ -183,6 +210,22 @@ async def update_transaction(
     except IntegrityError as exc:
         await db.rollback()
         raise DuplicateTransactionError(_DUPLICATE_MESSAGE) from exc
+
+    if debt_adjustment_relevant:
+        # Reverse-then-reapply (not a blind re-add) handles every case
+        # uniformly: debt_id unset->set, set->unset, set->a different debt,
+        # and amount_cents changed on the same debt.
+        new_debt_id = transaction.debt_id
+        new_amount_cents = transaction.amount_cents
+        if old_debt_id is not None:
+            await adjust_debt_balance_for_transaction(
+                db, household_id=household_id, debt_id=old_debt_id, delta_cents=-old_amount_cents
+            )
+        if new_debt_id is not None:
+            await adjust_debt_balance_for_transaction(
+                db, household_id=household_id, debt_id=new_debt_id, delta_cents=new_amount_cents
+            )
+
     return transaction
 
 
@@ -194,6 +237,17 @@ async def delete_transaction(
     )
     if transaction is None:
         return False
+    if transaction.debt_id is not None:
+        # ondelete="SET NULL" on transactions.debt_id only fires if the
+        # *debt* row is deleted, not the transaction -- deleting a
+        # debt-linked transaction is a normal app-level delete, so the
+        # balance adjustment must be reversed explicitly here first.
+        await adjust_debt_balance_for_transaction(
+            db,
+            household_id=household_id,
+            debt_id=transaction.debt_id,
+            delta_cents=-transaction.amount_cents,
+        )
     await db.delete(transaction)
     await db.flush()
     return True
@@ -214,6 +268,8 @@ async def list_transactions(
         stmt = stmt.where(Transaction.category_id.is_(None))
     elif params.category_id is not None:
         stmt = stmt.where(Transaction.category_id == params.category_id)
+    if params.debt_id is not None:
+        stmt = stmt.where(Transaction.debt_id == params.debt_id)
     if params.search:
         stmt = stmt.where(Transaction.description_display.ilike(f"%{params.search}%"))
 
