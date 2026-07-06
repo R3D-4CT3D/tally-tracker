@@ -29,6 +29,7 @@ interface TransactionFormState {
   categoryId: string;
   notes: string;
   debtId: string;
+  flaggedUnexpected: boolean;
 }
 
 function today(): string {
@@ -51,6 +52,7 @@ const EMPTY_FORM: TransactionFormState = {
   categoryId: "",
   notes: "",
   debtId: "",
+  flaggedUnexpected: false,
 };
 
 export function TransactionFormPage() {
@@ -84,6 +86,7 @@ export function TransactionFormPage() {
         categoryId: existing.data.category_id ?? "",
         notes: existing.data.notes ?? "",
         debtId: existing.data.debt_id ?? "",
+        flaggedUnexpected: existing.data.flagged_unexpected,
       });
       setOriginalCategoryId(existing.data.category_id ?? "");
       setHasHydrated(true);
@@ -102,6 +105,7 @@ export function TransactionFormPage() {
       category_id: form.categoryId || null,
       notes: form.notes || null,
       debt_id: form.debtId || null,
+      flagged_unexpected: form.flaggedUnexpected,
     };
     try {
       if (isEditing && transactionId) {
@@ -244,6 +248,14 @@ export function TransactionFormPage() {
           value={form.notes}
           onChange={(e) => setForm({ ...form, notes: e.target.value })}
         />
+        <label className="flex min-h-11 items-center gap-2 text-sm text-text-primary/80">
+          <input
+            type="checkbox"
+            checked={form.flaggedUnexpected}
+            onChange={(e) => setForm({ ...form, flaggedUnexpected: e.target.checked })}
+          />
+          {t("transactions.flagUnexpectedLabel")}
+        </label>
         <ErrorBanner message={errorMessage(activeMutation.error, t("common.genericError"))} />
         <div className="flex gap-3">
           <PrimaryButton type="submit" disabled={activeMutation.isPending} className="px-4">

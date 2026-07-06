@@ -13,6 +13,8 @@ export interface Debt {
   due_day: number;
   paid_off_at: string | null;
   archived: boolean;
+  icon: string | null;
+  color: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -25,6 +27,8 @@ export interface DebtCreateRequest {
   apr_bps: number;
   min_payment_cents: number;
   due_day: number;
+  icon?: string | null;
+  color?: string | null;
 }
 
 export interface DebtUpdateRequest {
@@ -35,4 +39,6 @@ export interface DebtUpdateRequest {
   apr_bps?: number;
   min_payment_cents?: number;
   due_day?: number;
+  icon?: string | null;
+  color?: string | null;
 }

@@ -3,12 +3,14 @@ import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Card } from "../components/Card";
+import { GoalCompleteAnimation } from "../components/board/GoalCompleteAnimation";
 import { EmptyState } from "../components/EmptyState";
 import { ErrorBanner } from "../components/ErrorBanner";
 import { FormField } from "../components/FormField";
 import { MoneyDisplay } from "../components/MoneyDisplay";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { ProgressBar } from "../components/ProgressBar";
+import { PropertyCard } from "../components/PropertyCard";
 import { RowActionLink } from "../components/RowActionLink";
 import { SecondaryButton } from "../components/SecondaryButton";
 import { useReducedMotion } from "../design-system/useReducedMotion";
@@ -80,6 +82,7 @@ export function GoalsPage() {
   const [contributingId, setContributingId] = useState<string | null>(null);
   const [contributionForm, setContributionForm] =
     useState<ContributionFormState>(EMPTY_CONTRIBUTION_FORM);
+  const [completionCelebration, setCompletionCelebration] = useState<Goal | null>(null);
 
   const activeMutation = editingId ? updateGoal : createGoal;
 
@@ -141,15 +144,27 @@ export function GoalsPage() {
 
   async function handleRecordContribution(event: FormEvent, goalId: string) {
     event.preventDefault();
+    const amountCents = parseDollarsToCents(contributionForm.amountDollars);
+    const goal = goals.data?.find((g) => g.id === goalId);
+    // Computed client-side from the same math the backend applies
+    // (current_cents += amount_cents) rather than waiting on the goals
+    // query to refetch after invalidation.
+    const willComplete =
+      goal !== undefined &&
+      goal.completed_at === null &&
+      goal.current_cents + amountCents >= goal.target_cents;
     try {
       await recordContribution.mutateAsync({
         id: goalId,
         payload: {
-          amount_cents: parseDollarsToCents(contributionForm.amountDollars),
+          amount_cents: amountCents,
           date: contributionForm.date,
         },
       });
       closeContributionForm();
+      if (willComplete && goal) {
+        setCompletionCelebration(goal);
+      }
     } catch {
       // surfaced via recordContribution.error below
     }
@@ -221,40 +236,35 @@ export function GoalsPage() {
           const pct = goal.target_cents > 0 ? (goal.current_cents / goal.target_cents) * 100 : 0;
           return (
             <li key={goal.id}>
-              <Card size="row" className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span aria-hidden>{goal.icon}</span>
-                    <p className="font-medium">
-                      {goal.name}
-                      {goal.completed_at ? (
-                        <span className="ml-2 text-xs text-success-600 dark:text-success-400">
-                          {t("goals.completedBadge")}
-                        </span>
-                      ) : null}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm">
-                      <MoneyDisplay cents={goal.current_cents} /> /{" "}
-                      <MoneyDisplay cents={goal.target_cents} />
-                    </span>
-                    <RowActionLink onClick={() => openContributionForm(goal.id)}>
-                      {t("goals.logContributionButton")}
-                    </RowActionLink>
-                    <RowActionLink onClick={() => openEditForm(goal)}>
-                      {t("common.edit")}
-                    </RowActionLink>
-                    <RowActionLink onClick={() => handleDelete(goal.id)}>
-                      {t("common.delete")}
-                    </RowActionLink>
-                  </div>
-                </div>
+              <PropertyCard
+                color={goal.color}
+                icon={goal.icon}
+                name={goal.name}
+                owned={goal.completed_at !== null}
+                ownedLabel={t("goals.completedBadge")}
+                amount={
+                  <span className="flex items-baseline gap-1 text-base">
+                    <MoneyDisplay cents={goal.current_cents} /> /{" "}
+                    <MoneyDisplay cents={goal.target_cents} />
+                  </span>
+                }
+              >
                 <ProgressBar
                   pct={pct}
                   milestones={[25, 50, 75]}
                   reduceMotion={prefersReducedMotion}
                 />
+                <div className="flex items-center gap-4">
+                  <RowActionLink onClick={() => openContributionForm(goal.id)}>
+                    {t("goals.logContributionButton")}
+                  </RowActionLink>
+                  <RowActionLink onClick={() => openEditForm(goal)}>
+                    {t("common.edit")}
+                  </RowActionLink>
+                  <RowActionLink onClick={() => handleDelete(goal.id)}>
+                    {t("common.delete")}
+                  </RowActionLink>
+                </div>
 
                 {contributingId === goal.id ? (
                   <form
@@ -301,12 +311,19 @@ export function GoalsPage() {
                     </div>
                   </form>
                 ) : null}
-              </Card>
+              </PropertyCard>
             </li>
           );
         })}
       </ul>
       {goals.data?.length === 0 ? <EmptyState message={t("goals.empty")} /> : null}
+      <GoalCompleteAnimation
+        open={completionCelebration !== null}
+        goalName={completionCelebration?.name ?? ""}
+        goalIcon={completionCelebration?.icon ?? ""}
+        goalColor={completionCelebration?.color ?? "#1B7A3E"}
+        onDismiss={() => setCompletionCelebration(null)}
+      />
     </div>
   );
 }

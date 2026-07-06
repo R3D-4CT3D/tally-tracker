@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 import { useMe } from "../features/auth/hooks";
+import { BoardSection } from "../features/board/BoardSection";
 import { DebtBossesStrip } from "../features/dashboard/DebtBossesStrip";
 import { HeroRow } from "../features/dashboard/HeroRow";
 import { MonthSpendingDonut } from "../features/dashboard/MonthSpendingDonut";
@@ -21,6 +22,7 @@ export function DashboardPage() {
           {t("dashboard.welcome", { name: me.data.display_name })}
         </h2>
       ) : null}
+      <BoardSection />
       <HeroRow />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <SinceYouWereHere />

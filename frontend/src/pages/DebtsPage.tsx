@@ -3,12 +3,14 @@ import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Card } from "../components/Card";
+import { DebtPayoffAnimation } from "../components/board/DebtPayoffAnimation";
 import { EmptyState } from "../components/EmptyState";
 import { ErrorBanner } from "../components/ErrorBanner";
 import { FormField } from "../components/FormField";
 import { MoneyDisplay } from "../components/MoneyDisplay";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { ProgressBar } from "../components/ProgressBar";
+import { PropertyCard } from "../components/PropertyCard";
 import { RowActionLink } from "../components/RowActionLink";
 import { SecondaryButton } from "../components/SecondaryButton";
 import { SelectField } from "../components/SelectField";
@@ -34,8 +36,13 @@ interface DebtFormState {
   aprPercent: string;
   minPaymentDollars: string;
   dueDay: string;
+  icon: string;
+  color: string;
 }
 
+// Property-card defaults for the Monopoly board's mortgage/railroad tiles --
+// purely cosmetic, matching Goal's icon/color pattern but optional here
+// since existing debts predate these fields.
 const EMPTY_FORM: DebtFormState = {
   name: "",
   type: "credit_card",
@@ -44,6 +51,8 @@ const EMPTY_FORM: DebtFormState = {
   aprPercent: "0",
   minPaymentDollars: "0.00",
   dueDay: "1",
+  icon: "💳",
+  color: "#2c3463",
 };
 
 function toFormState(debt: Debt): DebtFormState {
@@ -55,6 +64,8 @@ function toFormState(debt: Debt): DebtFormState {
     aprPercent: (debt.apr_bps / 100).toString(),
     minPaymentDollars: formatCentsAsDollarsInput(debt.min_payment_cents),
     dueDay: String(debt.due_day),
+    icon: debt.icon ?? EMPTY_FORM.icon,
+    color: debt.color ?? EMPTY_FORM.color,
   };
 }
 
@@ -74,6 +85,11 @@ interface PaymentFormState {
 
 const EMPTY_PAYMENT_FORM: PaymentFormState = { accountId: "", amountDollars: "", date: today() };
 
+// Fallback property-card look for debts predating icon/color -- Debt's
+// fields are nullable (unlike Goal's), so PropertyCard always needs a value.
+const FALLBACK_DEBT_ICON = "🏦";
+const FALLBACK_DEBT_COLOR = "#2c3463";
+
 export function DebtsPage() {
   const { t } = useTranslation();
   const prefersReducedMotion = useReducedMotion();
@@ -91,6 +107,7 @@ export function DebtsPage() {
 
   const [payingId, setPayingId] = useState<string | null>(null);
   const [paymentForm, setPaymentForm] = useState<PaymentFormState>(EMPTY_PAYMENT_FORM);
+  const [payoffCelebration, setPayoffCelebration] = useState<string | null>(null);
 
   const activeMutation = editingId ? updateDebt : createDebt;
 
@@ -123,6 +140,8 @@ export function DebtsPage() {
       apr_bps: Math.round(Number(form.aprPercent) * 100),
       min_payment_cents: parseDollarsToCents(form.minPaymentDollars),
       due_day: Number(form.dueDay),
+      icon: form.icon,
+      color: form.color,
     };
     try {
       if (editingId) {
@@ -153,16 +172,29 @@ export function DebtsPage() {
 
   async function handleLogPayment(event: FormEvent, debtId: string) {
     event.preventDefault();
+    const amountCents = -Math.abs(parseDollarsToCents(paymentForm.amountDollars));
+    const debt = debts.data?.find((d) => d.id === debtId);
+    // Computed client-side from the same balance math the backend applies
+    // (current_balance_cents += delta_cents) rather than waiting on the
+    // debts query to refetch after invalidation -- avoids a race between
+    // the mutation resolving and the list actually reflecting paid_off_at.
+    const willPayOff =
+      debt !== undefined &&
+      debt.paid_off_at === null &&
+      debt.current_balance_cents + amountCents <= 0;
     try {
       await logPayment.mutateAsync({
         debt_id: debtId,
         account_id: paymentForm.accountId,
         // Payments are logged as negative -- the amount typed in is the
         // payment size, applied as a balance-reducing (negative) transaction.
-        amount_cents: -Math.abs(parseDollarsToCents(paymentForm.amountDollars)),
+        amount_cents: amountCents,
         date: paymentForm.date,
       });
       closePaymentForm();
+      if (willPayOff && debt) {
+        setPayoffCelebration(debt.name);
+      }
     } catch {
       // surfaced via logPayment.error below
     }
@@ -235,12 +267,28 @@ export function DebtsPage() {
               label={t("debts.dueDayLabel")}
               name="due_day"
               type="number"
+              inputMode="numeric"
               min={1}
               max={31}
               required
               value={form.dueDay}
               onChange={(e) => setForm({ ...form, dueDay: e.target.value })}
             />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                label={t("debts.iconLabel")}
+                name="icon"
+                value={form.icon}
+                onChange={(e) => setForm({ ...form, icon: e.target.value })}
+              />
+              <FormField
+                label={t("debts.colorLabel")}
+                name="color"
+                type="color"
+                value={form.color}
+                onChange={(e) => setForm({ ...form, color: e.target.value })}
+              />
+            </div>
             <ErrorBanner message={errorMessage(activeMutation.error, t("common.genericError"))} />
             <div className="flex gap-3">
               <PrimaryButton type="submit" disabled={activeMutation.isPending} className="px-4">
@@ -269,45 +317,37 @@ export function DebtsPage() {
               : 0;
           return (
             <li key={debt.id}>
-              <Card size="row" className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">
-                      {debt.name}
-                      {debt.paid_off_at ? (
-                        <span className="ml-2 text-xs text-success-600 dark:text-success-400">
-                          {t("debts.paidOffBadge")}
-                        </span>
-                      ) : null}
-                      {debt.archived ? (
-                        <span className="ml-2 text-xs text-text-primary/50">
-                          {t("debts.archivedBadge")}
-                        </span>
-                      ) : null}
-                    </p>
-                    <p className="text-xs text-text-primary/60">
-                      {t(`debts.types.${debt.type}`)} · {formatBpsAsPercentDisplay(debt.apr_bps)}{" "}
-                      {t("debts.aprSuffix")} · {t("debts.dueDayValue", { day: debt.due_day })}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <MoneyDisplay cents={debt.current_balance_cents} />
-                    {!debt.archived ? (
-                      <RowActionLink onClick={() => openPaymentForm(debt.id)}>
-                        {t("debts.logPaymentButton")}
-                      </RowActionLink>
-                    ) : null}
-                    <RowActionLink onClick={() => openEditForm(debt)}>
-                      {t("common.edit")}
-                    </RowActionLink>
-                    {!debt.archived ? (
-                      <RowActionLink onClick={() => handleArchive(debt.id)}>
-                        {t("common.archive")}
-                      </RowActionLink>
-                    ) : null}
-                  </div>
-                </div>
+              <PropertyCard
+                color={debt.color ?? FALLBACK_DEBT_COLOR}
+                icon={debt.icon ?? FALLBACK_DEBT_ICON}
+                name={debt.name}
+                owned={debt.paid_off_at !== null}
+                ownedLabel={t("debts.paidOffBadge")}
+                amount={<MoneyDisplay cents={debt.current_balance_cents} />}
+              >
+                <p className="text-xs text-text-primary/60">
+                  {t(`debts.types.${debt.type}`)} · {formatBpsAsPercentDisplay(debt.apr_bps)}{" "}
+                  {t("debts.aprSuffix")} · {t("debts.dueDayValue", { day: debt.due_day })}
+                  {debt.archived ? (
+                    <span className="ml-2 text-text-primary/50">{t("debts.archivedBadge")}</span>
+                  ) : null}
+                </p>
                 <ProgressBar pct={pct} variant="boss" reduceMotion={prefersReducedMotion} />
+                <div className="flex items-center gap-4">
+                  {!debt.archived ? (
+                    <RowActionLink onClick={() => openPaymentForm(debt.id)}>
+                      {t("debts.logPaymentButton")}
+                    </RowActionLink>
+                  ) : null}
+                  <RowActionLink onClick={() => openEditForm(debt)}>
+                    {t("common.edit")}
+                  </RowActionLink>
+                  {!debt.archived ? (
+                    <RowActionLink onClick={() => handleArchive(debt.id)}>
+                      {t("common.archive")}
+                    </RowActionLink>
+                  ) : null}
+                </div>
 
                 {payingId === debt.id ? (
                   <form
@@ -366,12 +406,17 @@ export function DebtsPage() {
                     </div>
                   </form>
                 ) : null}
-              </Card>
+              </PropertyCard>
             </li>
           );
         })}
       </ul>
       {debts.data?.length === 0 ? <EmptyState message={t("debts.empty")} /> : null}
+      <DebtPayoffAnimation
+        open={payoffCelebration !== null}
+        debtName={payoffCelebration ?? ""}
+        onDismiss={() => setPayoffCelebration(null)}
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ export interface Transaction {
   source: string;
   created_by: string;
   debt_id: string | null;
+  flagged_unexpected: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -22,6 +23,7 @@ export interface TransactionCreateRequest {
   category_id?: string | null;
   notes?: string | null;
   debt_id?: string | null;
+  flagged_unexpected?: boolean;
 }
 
 export interface TransactionUpdateRequest {
@@ -32,6 +34,7 @@ export interface TransactionUpdateRequest {
   category_id?: string | null;
   notes?: string | null;
   debt_id?: string | null;
+  flagged_unexpected?: boolean;
 }
 
 export interface TransactionFilters {
