@@ -23,6 +23,7 @@ DEFAULT_CATEGORIES: list[dict[str, str]] = [
     {"name": "Debt Payment", "icon": "💳", "color": "#DC2626"},
     {"name": "Savings", "icon": "🐷", "color": "#059669"},
     {"name": "Income", "icon": "💰", "color": "#CA8A04"},
+    {"name": "Fees", "icon": "🧾", "color": "#78716C"},
     {"name": "Misc", "icon": "📦", "color": "#71717A"},
 ]
 

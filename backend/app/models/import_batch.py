@@ -31,3 +31,6 @@ class ImportBatch(Base, TimestampMixin):
     row_count: Mapped[int] = mapped_column(Integer)
     imported_count: Mapped[int] = mapped_column(Integer)
     skipped_dupes: Mapped[int] = mapped_column(Integer)
+    # Committed rows where a rule (user-defined or built-in merchant pattern)
+    # set the category -- surfaced in the wizard's post-commit summary.
+    auto_categorized_count: Mapped[int] = mapped_column(Integer, default=0)

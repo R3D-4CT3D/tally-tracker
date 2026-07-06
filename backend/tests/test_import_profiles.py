@@ -30,7 +30,7 @@ async def test_create_and_list_import_profiles(client: AsyncClient) -> None:
     await client.post("/api/v1/setup", json=SETUP_PAYLOAD)
     created = await _create_profile(client)
     assert created["name"] == "Chase Checking"
-    assert created["column_mapping"] == MAPPING
+    assert created["column_mapping"] == {**MAPPING, "dedupe_description": None}
     assert created["date_format"] == "MDY"
 
     listed = await client.get("/api/v1/import-profiles")

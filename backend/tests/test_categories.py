@@ -19,12 +19,12 @@ async def _create_category(client: AsyncClient, **overrides: Any) -> dict[str, A
     return result
 
 
-async def test_setup_seeds_thirteen_default_categories(client: AsyncClient) -> None:
+async def test_setup_seeds_default_categories(client: AsyncClient) -> None:
     await client.post("/api/v1/setup", json=SETUP_PAYLOAD)
     resp = await client.get("/api/v1/categories")
     assert resp.status_code == 200
     categories = resp.json()
-    assert len(categories) == 13
+    assert len(categories) == 14
     assert all(c["is_system"] is True for c in categories)
     assert {c["name"] for c in categories} == {
         "Housing",
@@ -39,6 +39,7 @@ async def test_setup_seeds_thirteen_default_categories(client: AsyncClient) -> N
         "Debt Payment",
         "Savings",
         "Income",
+        "Fees",
         "Misc",
     }
 

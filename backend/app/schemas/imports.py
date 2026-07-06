@@ -11,6 +11,11 @@ class ColumnMapping(BaseModel):
     date: str
     description: str
     amount: str
+    # Optional, defaults to `description` when unset: some bank exports (e.g.
+    # Wells Fargo credit card) want a clean display description but a
+    # separate raw-merchant column for dedupe hashing, since the display
+    # text alone is too generic/repeated to dedupe reliably against.
+    dedupe_description: str | None = None
 
 
 class ImportUploadResponse(BaseModel):
@@ -23,6 +28,13 @@ class ImportUploadResponse(BaseModel):
     suggested_mapping: ColumnMapping | None
     date_format_suggestion: DateFormat
     date_format_ambiguous: bool
+    # True when the format is already known for certain -- either an
+    # explicit saved profile was selected, or the header matched a built-in
+    # bank-format signature (app/services/bank_formats.py). The wizard skips
+    # the manual column-mapping step entirely in either case.
+    skip_mapping_step: bool = False
+    detected_bank_format: str | None = None
+    suggested_account_id: UUID | None = None
 
 
 class ImportPasteRequest(BaseModel):
@@ -40,6 +52,7 @@ class ImportPreviewRow(BaseModel):
     row_index: int
     date: str | None
     description: str | None
+    description_display: str | None
     amount_cents: int | None
     category_id: UUID | None
     matched_rule_id: UUID | None
@@ -78,5 +91,6 @@ class ImportBatchOut(BaseModel):
     row_count: int
     imported_count: int
     skipped_dupes: int
+    auto_categorized_count: int
     created_at: datetime
     undoable: bool

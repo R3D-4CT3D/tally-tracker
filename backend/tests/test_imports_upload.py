@@ -86,6 +86,7 @@ async def test_upload_auto_detects_mapping_and_date_format(client: AsyncClient) 
         "date": "Transaction Date",
         "description": "Description",
         "amount": "Amount",
+        "dedupe_description": None,
     }
     assert body["date_format_suggestion"] == "MDY"
     assert body["date_format_ambiguous"] is False
@@ -238,6 +239,7 @@ async def test_saved_profile_auto_applies_mapping_on_next_upload(client: AsyncCl
         "date": "Transaction Date",
         "description": "Description",
         "amount": "Amount",
+        "dedupe_description": None,
     }
     assert body["date_format_suggestion"] == "MDY"
     assert body["date_format_ambiguous"] is False

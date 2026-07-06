@@ -21,6 +21,7 @@ from app.schemas.imports import (
     ImportPreviewRow,
     ImportUploadResponse,
 )
+from app.services.board import record_checkin
 from app.services.import_parsing import ImportParsingError, sniff_encoding_and_decode
 from app.services.import_profiles import create_import_profile, get_import_profile
 from app.services.import_sessions import delete_import_session, get_import_session
@@ -46,6 +47,7 @@ def _to_batch_out(batch: ImportBatch) -> ImportBatchOut:
         row_count=batch.row_count,
         imported_count=batch.imported_count,
         skipped_dupes=batch.skipped_dupes,
+        auto_categorized_count=batch.auto_categorized_count,
         created_at=batch.created_at,
         undoable=batch_is_undoable(batch, settings.import_undo_window_hours),
     )
@@ -84,6 +86,7 @@ async def upload_import_route(
 
     try:
         _, response = await start_import_session(
+            db,
             redis,
             household_id=uuid.UUID(current_user.household_id),
             raw_text=text,
@@ -125,6 +128,7 @@ async def paste_import_route(
 
     try:
         _, response = await start_import_session(
+            db,
             redis,
             household_id=uuid.UUID(current_user.household_id),
             raw_text=payload.text,
@@ -175,6 +179,7 @@ async def preview_import_route(
             row_index=r.row_index,
             date=r.date.isoformat() if r.date is not None else None,
             description=r.description,
+            description_display=r.description_display,
             amount_cents=r.amount_cents,
             category_id=r.category_id,
             matched_rule_id=r.matched_rule_id,
@@ -255,6 +260,11 @@ async def commit_import_route(
         )
 
     await delete_import_session(redis, session_id)
+    await record_checkin(
+        db,
+        household_id=uuid.UUID(current_user.household_id),
+        user_id=uuid.UUID(current_user.user_id),
+    )
     await db.commit()
     return _to_batch_out(batch)
 

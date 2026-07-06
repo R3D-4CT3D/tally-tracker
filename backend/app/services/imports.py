@@ -11,11 +11,14 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.account import Account
 from app.models.import_batch import ImportBatch
 from app.models.import_profile import ImportProfile
 from app.models.transaction import Transaction
 from app.schemas.imports import ColumnMapping, DateFormat, ImportUploadResponse
 from app.services.accounts import get_account
+from app.services.bank_formats import detect_bank_format
+from app.services.builtin_categorization import build_builtin_rules
 from app.services.import_parsing import (
     ImportParsingError,
     detect_column_mapping,
@@ -60,7 +63,18 @@ class ProcessedRow:
         return self.duplicate != "exact"
 
 
+async def _suggest_account_from_last_four(
+    db: AsyncSession, *, household_id: uuid.UUID, last_four: str
+) -> uuid.UUID | None:
+    stmt = select(Account.id).where(
+        Account.household_id == household_id, Account.last_four == last_four
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def start_import_session(
+    db: AsyncSession,
     redis: Redis,
     *,
     household_id: uuid.UUID,
@@ -88,22 +102,48 @@ async def start_import_session(
     suggested_mapping: ColumnMapping | None = None
     date_format_suggestion: DateFormat = "MDY"
     date_format_ambiguous = True
+    skip_mapping_step = False
+    detected_bank_format: str | None = None
+    suggested_account_id: uuid.UUID | None = None
 
     if profile is not None:
+        # The user already told us the format by picking a saved profile --
+        # no reason to still show a pre-filled mapping form.
         suggested_mapping = ColumnMapping.model_validate(profile.column_mapping)
         date_format_suggestion = profile.date_format  # type: ignore[assignment]
         date_format_ambiguous = False
+        skip_mapping_step = True
     else:
-        detected = detect_column_mapping(header)
-        if all(detected.values()):
-            suggested_mapping = ColumnMapping.model_validate(detected)
-            date_column_index = header.index(detected["date"])  # type: ignore[arg-type]
-            samples = [
-                row[date_column_index]
-                for row in rows[:_SAMPLE_ROWS_LIMIT]
-                if date_column_index < len(row)
-            ]
-            date_format_suggestion, date_format_ambiguous = detect_date_format(samples)
+        bank_format = detect_bank_format(header)
+        if bank_format is not None:
+            suggested_mapping = bank_format.mapping
+            date_format_suggestion = bank_format.date_format
+            date_format_ambiguous = False
+            skip_mapping_step = True
+            detected_bank_format = bank_format.name
+
+            if bank_format.last_four_column is not None:
+                last_four_idx = header.index(bank_format.last_four_column)
+                for row in rows:
+                    if last_four_idx < len(row) and row[last_four_idx].strip():
+                        suggested_account_id = await _suggest_account_from_last_four(
+                            db,
+                            household_id=household_id,
+                            last_four=row[last_four_idx].strip(),
+                        )
+                        if suggested_account_id is not None:
+                            break
+        else:
+            detected = detect_column_mapping(header)
+            if all(detected.values()):
+                suggested_mapping = ColumnMapping.model_validate(detected)
+                date_column_index = header.index(detected["date"])  # type: ignore[arg-type]
+                samples = [
+                    row[date_column_index]
+                    for row in rows[:_SAMPLE_ROWS_LIMIT]
+                    if date_column_index < len(row)
+                ]
+                date_format_suggestion, date_format_ambiguous = detect_date_format(samples)
 
     response = ImportUploadResponse(
         import_session_id=session.session_id,
@@ -115,6 +155,9 @@ async def start_import_session(
         suggested_mapping=suggested_mapping,
         date_format_suggestion=date_format_suggestion,
         date_format_ambiguous=date_format_ambiguous,
+        skip_mapping_step=skip_mapping_step,
+        detected_bank_format=detected_bank_format,
+        suggested_account_id=suggested_account_id,
     )
     return session, response
 
@@ -176,8 +219,21 @@ async def _process_rows(
             f"Column mapping references a column not in the file: {exc}"
         ) from exc
 
+    dedupe_description_idx: int | None = None
+    if mapping.dedupe_description is not None:
+        try:
+            dedupe_description_idx = session.header.index(mapping.dedupe_description)
+        except ValueError as exc:
+            raise ImportParsingError(
+                f"Column mapping references a column not in the file: {exc}"
+            ) from exc
+
     existing_hashes = await _fetch_existing_hashes(db, household_id)
+    # Real household rules always win (first-match-wins over list order) --
+    # built-in merchant-pattern suggestions are appended after and only fire
+    # when nothing the user defined matched.
     rules = await list_rules(db, household_id=household_id)
+    rules = rules + await build_builtin_rules(db, household_id=household_id)
 
     seen_hashes: set[str] = set()
     processed: list[ProcessedRow] = []
@@ -211,12 +267,21 @@ async def _process_rows(
             )
             continue
 
+        dedupe_description = description
+        if dedupe_description_idx is not None:
+            raw_dedupe_description = (
+                row[dedupe_description_idx] if dedupe_description_idx < len(row) else ""
+            )
+            # Falls back to the display description if this row's dedupe
+            # column happens to be blank, rather than hashing an empty string.
+            dedupe_description = raw_dedupe_description.strip() or description
+
         dedupe_hash = compute_dedupe_hash(
             household_id=household_id,
             account_id=account_id,
             date=parsed_date,
             amount_cents=parsed_amount,
-            description=description,
+            description=dedupe_description,
         )
         duplicate: Literal["exact", "fuzzy"] | None = None
         if dedupe_hash in existing_hashes or dedupe_hash in seen_hashes:
@@ -233,9 +298,21 @@ async def _process_rows(
         ):
             duplicate = "fuzzy"
 
+        # Rule/built-in-pattern matching searches the display description
+        # *and* the raw dedupe description when they differ -- bank exports
+        # (Wells Fargo included) often show a generic display description
+        # ("REFUNDED TO WELLS FARGO CARD") while the raw merchant name
+        # carries the actual identifying text ("AMAZON.COM REFUND"). Appended,
+        # not replaced, so "starts_with" rules still anchor on the display
+        # text's actual start.
+        match_description = (
+            description
+            if dedupe_description == description
+            else f"{description} {dedupe_description}"
+        )
         matched_rule = apply_rules(
             rules,
-            description=description,
+            description=match_description,
             amount_cents=parsed_amount,
             account_id=account_id,
             timeout=regex_timeout,
@@ -326,6 +403,7 @@ async def commit_import(
 
     imported_count = 0
     skipped_dupes = 0
+    auto_categorized_count = 0
 
     for row in processed:
         override = overrides.get(str(row.row_index))
@@ -374,9 +452,15 @@ async def commit_import(
         )
         db.add(transaction)
         imported_count += 1
+        if row.category_id is not None:
+            # There's no manual category-override step in the wizard today
+            # -- every non-null category_id on a committed row came from a
+            # rule match, real (user-defined) or built-in merchant pattern.
+            auto_categorized_count += 1
 
     batch.imported_count = imported_count
     batch.skipped_dupes = skipped_dupes
+    batch.auto_categorized_count = auto_categorized_count
 
     try:
         await db.flush()

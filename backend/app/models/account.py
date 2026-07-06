@@ -23,3 +23,7 @@ class Account(Base, TimestampMixin):
     color: Mapped[str] = mapped_column(String(7))
     icon: Mapped[str] = mapped_column(String(32))
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Last 4 digits of the card/account number, for CSV import account
+    # auto-suggest (bank exports often include a "Card Last 4" column) --
+    # not a real identifier, just a matching hint the user can override.
+    last_four: Mapped[str | None] = mapped_column(String(4), nullable=True)
