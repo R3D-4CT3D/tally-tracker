@@ -5,13 +5,16 @@ import { useTranslation } from "react-i18next";
 import { Card } from "../components/Card";
 import { EmptyState } from "../components/EmptyState";
 import { FIELD_CHROME_CLASSNAME } from "../components/fieldChrome";
-import { MoneyDisplay } from "../components/MoneyDisplay";
 import { PrimaryButton } from "../components/PrimaryButton";
-import { RowActionLink } from "../components/RowActionLink";
 import { SecondaryButton } from "../components/SecondaryButton";
 import { useAccounts } from "../features/accounts/hooks";
 import { useCategories } from "../features/categories/hooks";
-import { useDeleteTransactionMutation, useTransactions } from "../features/transactions/hooks";
+import { SwipeableTransactionRow } from "../features/transactions/SwipeableTransactionRow";
+import {
+  useDeleteTransactionMutation,
+  useTransactions,
+  useUpdateTransactionMutation,
+} from "../features/transactions/hooks";
 import type { TransactionFilters } from "../features/transactions/types";
 
 const EMPTY_FILTERS: TransactionFilters = {};
@@ -21,6 +24,7 @@ export function TransactionsPage() {
   const accounts = useAccounts();
   const categories = useCategories();
   const deleteTransaction = useDeleteTransactionMutation();
+  const updateTransaction = useUpdateTransactionMutation();
 
   const [filters, setFilters] = useState<TransactionFilters>(EMPTY_FILTERS);
   const [cursorStack, setCursorStack] = useState<string[]>([]);
@@ -53,6 +57,14 @@ export function TransactionsPage() {
   async function handleDelete(id: string) {
     if (!window.confirm(t("transactions.confirmDelete"))) return;
     await deleteTransaction.mutateAsync(id);
+  }
+
+  async function handleConfirmedDelete(id: string) {
+    await deleteTransaction.mutateAsync(id);
+  }
+
+  async function handleSetCategory(id: string, categoryId: string) {
+    await updateTransaction.mutateAsync({ id, payload: { category_id: categoryId } });
   }
 
   return (
@@ -152,42 +164,17 @@ export function TransactionsPage() {
             : undefined;
           return (
             <li key={transaction.id}>
-              <Card size="row" className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="w-24 shrink-0 text-xs text-text-primary/60">
-                    {transaction.date}
-                  </span>
-                  <div>
-                    <p className="font-medium">{transaction.description_display}</p>
-                    <p className="text-xs text-text-primary/60">
-                      {accountNameById.get(transaction.account_id) ??
-                        t("transactions.unknownAccount")}
-                      {category
-                        ? ` · ${category.icon} ${category.name}`
-                        : ` · ${t("transactions.uncategorizedOnly")}`}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <MoneyDisplay
-                    cents={transaction.amount_cents}
-                    className={
-                      transaction.amount_cents < 0
-                        ? "text-danger-600 dark:text-danger-400"
-                        : "text-success-600 dark:text-success-400"
-                    }
-                  />
-                  <RowActionLink onClick={() => handleDelete(transaction.id)}>
-                    {t("common.delete")}
-                  </RowActionLink>
-                  <Link
-                    to={`/transactions/${transaction.id}/edit`}
-                    className="text-sm text-text-primary/70 underline-offset-2 hover:underline"
-                  >
-                    {t("common.edit")}
-                  </Link>
-                </div>
-              </Card>
+              <SwipeableTransactionRow
+                transaction={transaction}
+                accountName={
+                  accountNameById.get(transaction.account_id) ?? t("transactions.unknownAccount")
+                }
+                category={category}
+                categories={categories.data ?? []}
+                onDelete={handleDelete}
+                onConfirmedDelete={handleConfirmedDelete}
+                onSetCategory={handleSetCategory}
+              />
             </li>
           );
         })}

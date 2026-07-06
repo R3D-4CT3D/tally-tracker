@@ -8,7 +8,7 @@ export function PrimaryButton({
   return (
     <button
       {...props}
-      className={`w-auto rounded-lg bg-ember-500 px-4 py-2.5 font-medium text-charcoal-950 transition-colors hover:bg-ember-600 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`min-h-11 w-auto rounded-lg bg-green-500 px-4 py-2.5 font-medium text-navy-950 transition-colors hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
     >
       {children}
     </button>

@@ -262,6 +262,7 @@ export function BillsPage() {
                 label={t("bills.dueDayLabel")}
                 name="due_day"
                 type="number"
+                inputMode="numeric"
                 min={1}
                 max={31}
                 required
@@ -274,6 +275,7 @@ export function BillsPage() {
                 label={t("bills.customIntervalDaysLabel")}
                 name="custom_interval_days"
                 type="number"
+                inputMode="numeric"
                 min={1}
                 required
                 value={form.customIntervalDays}

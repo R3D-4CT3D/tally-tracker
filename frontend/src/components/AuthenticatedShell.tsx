@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { useTheme } from "../design-system/useTheme";
 import { useLogoutMutation, useMe } from "../features/auth/hooks";
+import { MobileBottomNav } from "./MobileBottomNav";
+import { MobileMoreSheet } from "./MobileMoreSheet";
 
 const NAV_LINKS = [
   { to: "/dashboard", labelKey: "nav.dashboard" },
@@ -36,12 +39,21 @@ function MoonIcon() {
   );
 }
 
+function MoreIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
+      <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  );
+}
+
 export function AuthenticatedShell() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const me = useMe();
   const logout = useLogoutMutation();
   const { theme, toggleTheme } = useTheme();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   async function handleLogout() {
     // Navigate explicitly rather than relying on RequireAuth reacting to the
@@ -57,23 +69,25 @@ export function AuthenticatedShell() {
 
   return (
     <div className="min-h-screen bg-surface text-text-primary">
-      <header className="flex items-center justify-between border-b border-border/10 px-6 py-4">
-        <div className="flex items-baseline gap-3">
+      <header className="relative flex items-center justify-between gap-3 border-b border-border/10 px-4 py-4 md:px-6">
+        <div className="flex shrink-0 items-baseline gap-3">
           <span className="font-display text-lg font-semibold tracking-tight">
             {t("app.title")}
           </span>
           {me.data ? (
-            <span className="text-sm text-text-primary/60">{me.data.household_name}</span>
+            <span className="hidden text-sm text-text-primary/60 lg:inline">
+              {me.data.household_name}
+            </span>
           ) : null}
         </div>
-        <nav className="flex items-center gap-4">
+        <nav className="hidden min-w-0 items-center gap-4 overflow-x-auto md:flex">
           {NAV_LINKS.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
               className={({ isActive }) =>
-                `text-sm font-medium transition-colors ${
-                  isActive ? "text-ember-500" : "text-text-primary/70 hover:text-text-primary"
+                `shrink-0 text-sm font-medium transition-colors ${
+                  isActive ? "text-green-500" : "text-text-primary/70 hover:text-text-primary"
                 }`
               }
             >
@@ -81,15 +95,17 @@ export function AuthenticatedShell() {
             </NavLink>
           ))}
         </nav>
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center gap-2 md:gap-4">
           {me.data ? (
-            <span className="text-sm">{t("nav.greeting", { name: me.data.display_name })}</span>
+            <span className="hidden text-sm lg:inline">
+              {t("nav.greeting", { name: me.data.display_name })}
+            </span>
           ) : null}
           <button
             type="button"
             onClick={toggleTheme}
             aria-label={t(theme === "dark" ? "nav.switchToLight" : "nav.switchToDark")}
-            className="rounded-lg border border-border/20 p-1.5 transition-colors hover:bg-border/5"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border/20 transition-colors hover:bg-border/5"
           >
             {theme === "dark" ? <SunIcon /> : <MoonIcon />}
           </button>
@@ -97,15 +113,31 @@ export function AuthenticatedShell() {
             type="button"
             onClick={handleLogout}
             disabled={logout.isPending}
-            className="rounded-lg border border-border/20 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-border/5 disabled:opacity-60"
+            className="hidden min-h-11 items-center rounded-lg border border-border/20 px-3 text-sm font-medium transition-colors hover:bg-border/5 disabled:opacity-60 md:flex"
           >
             {t("nav.logout")}
           </button>
+          <button
+            type="button"
+            onClick={() => setMoreOpen((open) => !open)}
+            aria-label={t("nav.more")}
+            aria-expanded={moreOpen}
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-border/20 transition-colors hover:bg-border/5 md:hidden"
+          >
+            <MoreIcon />
+          </button>
         </div>
+        <MobileMoreSheet
+          open={moreOpen}
+          onClose={() => setMoreOpen(false)}
+          onLogout={handleLogout}
+          logoutPending={logout.isPending}
+        />
       </header>
-      <main className="p-6">
+      <main className="p-4 pb-24 md:p-6 md:pb-6">
         <Outlet />
       </main>
+      <MobileBottomNav />
     </div>
   );
 }
