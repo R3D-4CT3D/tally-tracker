@@ -8,6 +8,7 @@ from app.models.goal_contribution import GoalContribution
 from app.schemas.goals import GoalContributionCreate
 from app.services.goals import get_goal
 from app.services.transactions import InvalidReferenceError, get_transaction
+from app.services.trophies import record_trophy
 
 
 async def record_contribution(
@@ -43,10 +44,19 @@ async def record_contribution(
     # debts.paid_off_at does (see app/services/debts.py's symmetric
     # _maybe_toggle_paid_off) -- a deliberate, accepted asymmetry, not an
     # oversight.
-    if goal.current_cents >= goal.target_cents and goal.completed_at is None:
+    newly_completed = goal.current_cents >= goal.target_cents and goal.completed_at is None
+    if newly_completed:
         goal.completed_at = datetime.now(UTC)
     db.add(contribution)
     await db.flush()
+    if newly_completed:
+        await record_trophy(
+            db,
+            household_id=household_id,
+            kind="goal_complete",
+            ref_id=goal.id,
+            stats={"name": goal.name, "target_cents": goal.target_cents},
+        )
     return contribution
 
 

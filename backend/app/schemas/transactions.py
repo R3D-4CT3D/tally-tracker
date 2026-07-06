@@ -13,6 +13,7 @@ class TransactionCreate(BaseModel):
     category_id: UUID | None = None
     notes: str | None = Field(default=None, max_length=5000)
     debt_id: UUID | None = None
+    flagged_unexpected: bool = False
 
 
 class TransactionUpdate(BaseModel):
@@ -30,6 +31,7 @@ class TransactionUpdate(BaseModel):
     category_id: UUID | None = None
     notes: str | None = Field(default=None, max_length=5000)
     debt_id: UUID | None = None
+    flagged_unexpected: bool | None = None
 
 
 class TransactionOut(BaseModel):
@@ -46,6 +48,7 @@ class TransactionOut(BaseModel):
     source: str
     created_by: UUID
     debt_id: UUID | None
+    flagged_unexpected: bool
     created_at: datetime
     updated_at: datetime
 

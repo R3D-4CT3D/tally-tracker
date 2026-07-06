@@ -135,6 +135,7 @@ async def create_transaction(
         dedupe_hash=dedupe_hash,
         created_by=created_by,
         debt_id=payload.debt_id,
+        flagged_unexpected=payload.flagged_unexpected,
     )
     db.add(transaction)
     try:

@@ -7,6 +7,7 @@ from app.api.v1.accounts import router as accounts_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.balance_snapshots import router as balance_snapshots_router
 from app.api.v1.bills import router as bills_router
+from app.api.v1.board import router as board_router
 from app.api.v1.categories import router as categories_router
 from app.api.v1.debts import router as debts_router
 from app.api.v1.goals import router as goals_router
@@ -15,6 +16,7 @@ from app.api.v1.household import router as household_router
 from app.api.v1.import_profiles import router as import_profiles_router
 from app.api.v1.imports import router as imports_router
 from app.api.v1.invites import router as invites_router
+from app.api.v1.monthly_close import router as monthly_close_router
 from app.api.v1.rules import router as rules_router
 from app.api.v1.setup import router as setup_router
 from app.api.v1.transactions import router as transactions_router
@@ -49,3 +51,5 @@ app.include_router(debts_router, prefix="/api/v1")
 app.include_router(bills_router, prefix="/api/v1")
 app.include_router(goals_router, prefix="/api/v1")
 app.include_router(balance_snapshots_router, prefix="/api/v1")
+app.include_router(board_router, prefix="/api/v1")
+app.include_router(monthly_close_router, prefix="/api/v1")

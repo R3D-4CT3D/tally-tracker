@@ -17,6 +17,7 @@ from app.schemas.transactions import (
     TransactionOut,
     TransactionUpdate,
 )
+from app.services.board import record_checkin
 from app.services.transactions import (
     DuplicateTransactionError,
     InvalidReferenceError,
@@ -53,6 +54,13 @@ async def create_transaction_route(
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
     except InvalidReferenceError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+    if payload.debt_id is not None:
+        # Logging a debt payment is a board check-in-worthy action.
+        await record_checkin(
+            db,
+            household_id=uuid.UUID(current_user.household_id),
+            user_id=uuid.UUID(current_user.user_id),
+        )
     await db.commit()
     return TransactionOut.model_validate(transaction)
 
@@ -176,6 +184,13 @@ async def update_transaction_route(
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     if transaction is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Transaction not found")
+    if "category_id" in payload.model_fields_set and payload.category_id is not None:
+        # Categorizing a transaction is a board check-in-worthy action.
+        await record_checkin(
+            db,
+            household_id=uuid.UUID(current_user.household_id),
+            user_id=uuid.UUID(current_user.user_id),
+        )
     await db.commit()
     return TransactionOut.model_validate(transaction)
 

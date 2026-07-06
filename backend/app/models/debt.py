@@ -27,3 +27,8 @@ class Debt(Base, TimestampMixin):
     due_day: Mapped[int] = mapped_column(Integer)
     paid_off_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Nullable (unlike Goal.icon/color, which are required) -- existing debts
+    # predate these columns and nothing forces a user to backfill them. Purely
+    # for the Monopoly board's property-card styling (mortgage/railroad tiles).
+    icon: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    color: Mapped[str | None] = mapped_column(String(7), nullable=True)

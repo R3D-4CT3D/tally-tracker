@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 DebtType = Literal["credit_card", "auto_loan", "student_loan", "personal"]
 
+_COLOR_PATTERN = r"^#[0-9a-fA-F]{6}$"
+
 
 class DebtCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
@@ -15,6 +17,8 @@ class DebtCreate(BaseModel):
     apr_bps: int = Field(ge=0)
     min_payment_cents: int = Field(ge=0)
     due_day: int = Field(ge=1, le=31)
+    icon: str | None = Field(default=None, min_length=1, max_length=32)
+    color: str | None = Field(default=None, pattern=_COLOR_PATTERN)
 
 
 class DebtUpdate(BaseModel):
@@ -25,6 +29,8 @@ class DebtUpdate(BaseModel):
     apr_bps: int | None = Field(default=None, ge=0)
     min_payment_cents: int | None = Field(default=None, ge=0)
     due_day: int | None = Field(default=None, ge=1, le=31)
+    icon: str | None = Field(default=None, min_length=1, max_length=32)
+    color: str | None = Field(default=None, pattern=_COLOR_PATTERN)
 
 
 class DebtOut(BaseModel):
@@ -40,5 +46,7 @@ class DebtOut(BaseModel):
     due_day: int
     paid_off_at: datetime | None
     archived: bool
+    icon: str | None
+    color: str | None
     created_at: datetime
     updated_at: datetime

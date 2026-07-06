@@ -13,6 +13,7 @@ from app.schemas.goals import (
     GoalOut,
     GoalUpdate,
 )
+from app.services.board import record_checkin
 from app.services.goal_contributions import list_contributions, record_contribution
 from app.services.goals import create_goal, delete_goal, get_goal, list_goals, update_goal
 from app.services.transactions import InvalidReferenceError
@@ -113,6 +114,11 @@ async def record_contribution_route(
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     if contribution is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Goal not found")
+    await record_checkin(
+        db,
+        household_id=uuid.UUID(current_user.household_id),
+        user_id=uuid.UUID(current_user.user_id),
+    )
     await db.commit()
     return GoalContributionOut.model_validate(contribution)
 

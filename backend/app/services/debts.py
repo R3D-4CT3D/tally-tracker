@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.debt import Debt
 from app.schemas.debts import DebtCreate, DebtUpdate
+from app.services.trophies import record_trophy
 
 
 class InvalidDebtReferenceError(Exception):
@@ -91,6 +92,15 @@ async def adjust_debt_balance_for_transaction(
     debt = await get_debt(db, household_id=household_id, debt_id=debt_id)
     if debt is None:
         raise InvalidDebtReferenceError("Debt not found")
+    was_paid_off = debt.paid_off_at is not None
     debt.current_balance_cents += delta_cents
     _maybe_toggle_paid_off(debt)
     await db.flush()
+    if not was_paid_off and debt.paid_off_at is not None:
+        await record_trophy(
+            db,
+            household_id=household_id,
+            kind="debt_payoff",
+            ref_id=debt.id,
+            stats={"name": debt.name, "original_balance_cents": debt.original_balance_cents},
+        )

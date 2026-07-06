@@ -1,7 +1,16 @@
 import uuid
 from datetime import date as date_type
 
-from sqlalchemy import BigInteger, Date, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Date,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -44,3 +53,7 @@ class Transaction(Base, TimestampMixin):
     debt_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("debts.id", ondelete="SET NULL"), nullable=True
     )
+    # User-set flag for the board's Tax tile mechanic ("an unexpected large
+    # expense happened this week") -- purely a user annotation, nothing
+    # computes this automatically.
+    flagged_unexpected: Mapped[bool] = mapped_column(Boolean, default=False)
