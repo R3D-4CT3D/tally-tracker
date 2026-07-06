@@ -20,7 +20,7 @@ export function EmptyState({ icon, message, ctaLabel, ctaTo }: EmptyStateProps) 
       {ctaLabel && ctaTo ? (
         <Link
           to={ctaTo}
-          className="text-sm font-medium text-ember-600 underline-offset-2 hover:underline dark:text-ember-400"
+          className="text-sm font-medium text-green-600 underline-offset-2 hover:underline dark:text-green-400"
         >
           {ctaLabel}
         </Link>

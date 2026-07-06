@@ -22,14 +22,17 @@ export function DebtBossesStrip() {
       {activeDebts.length === 0 ? (
         <EmptyState message={t("dashboard.noDebts")} ctaLabel={t("dashboard.addDebtCta")} ctaTo="/debts" />
       ) : (
-        <ul className="flex flex-col gap-4">
+        <ul className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0">
           {activeDebts.map((debt) => {
             const pct =
               debt.original_balance_cents > 0
                 ? (debt.current_balance_cents / debt.original_balance_cents) * 100
                 : 0;
             return (
-              <li key={debt.id} className="flex flex-col gap-2">
+              <li
+                key={debt.id}
+                className="flex w-64 shrink-0 snap-start flex-col gap-2 rounded-xl border border-border/10 bg-surface-subtle p-3 md:w-auto md:shrink md:border-0 md:bg-transparent md:p-0"
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{debt.name}</p>

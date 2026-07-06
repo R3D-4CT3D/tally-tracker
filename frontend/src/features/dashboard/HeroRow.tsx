@@ -53,14 +53,18 @@ export function HeroRow() {
       label: t("dashboard.netLabel"),
       cents: (latest?.cash_cents ?? 0) - (latest?.debt_cents ?? 0),
       points: toPoints(data, "net"),
-      lineColor: color.ember[500],
+      lineColor: color.green[500],
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
       {metrics.map((metric) => (
-        <Card key={metric.key} size="form" className="flex flex-col gap-2">
+        <Card
+          key={metric.key}
+          size="form"
+          className="flex w-64 shrink-0 snap-start flex-col gap-2 md:w-auto md:shrink"
+        >
           <p className="text-sm font-medium text-text-primary/70">{metric.label}</p>
           {hasEnoughData ? (
             <>

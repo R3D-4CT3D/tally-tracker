@@ -20,7 +20,7 @@ function QuestCard({ goal, reduceMotion }: { goal: Goal; reduceMotion: boolean }
   );
 
   return (
-    <li className="flex flex-col gap-2">
+    <li className="flex w-64 shrink-0 snap-start flex-col gap-2 rounded-xl border border-border/10 bg-surface-subtle p-3 md:w-auto md:shrink md:border-0 md:bg-transparent md:p-0">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span aria-hidden>{goal.icon}</span>
@@ -52,7 +52,7 @@ export function QuestsStrip() {
       {activeGoals.length === 0 ? (
         <EmptyState message={t("dashboard.noGoals")} ctaLabel={t("dashboard.addGoalCta")} ctaTo="/goals" />
       ) : (
-        <ul className="flex flex-col gap-4">
+        <ul className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0">
           {activeGoals.map((goal) => (
             <QuestCard key={goal.id} goal={goal} reduceMotion={prefersReducedMotion} />
           ))}

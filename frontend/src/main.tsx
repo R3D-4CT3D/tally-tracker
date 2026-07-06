@@ -4,11 +4,12 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 
 // Self-hosted fonts (not a runtime Google Fonts call) -- same-origin, PWA
-// cacheable, no third-party DNS/TLS on first paint. Only the weights/axes
-// actually used are imported: Fraunces' "standard" (non-soft, non-wonk)
-// variable axis for display headings/numbers, Inter's 400/500/600/700
-// static weights for body text.
-import "@fontsource-variable/fraunces/standard.css";
+// cacheable, no third-party DNS/TLS on first paint. Roboto Slab's bold
+// weights only (600/700) for the Monopoly board's confident display
+// headings/hero numbers; Inter's 400/500/600/700 static weights for body
+// text (unchanged from the M5 design system).
+import "@fontsource/roboto-slab/latin-600.css";
+import "@fontsource/roboto-slab/latin-700.css";
 import "@fontsource/inter/latin-400.css";
 import "@fontsource/inter/latin-500.css";
 import "@fontsource/inter/latin-600.css";

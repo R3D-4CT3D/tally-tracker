@@ -3,10 +3,10 @@ interface ProgressBarProps {
   className?: string;
   /** Tick marks at these percentages along the track, e.g. [25, 50, 75]. */
   milestones?: number[];
-  /** "ember": quest/savings progress. "boss": debt HP bar (reads as debt
+  /** "green": quest/savings progress. "boss": debt HP bar (reads as debt
    * remaining -- drains as the debt is paid down, matching "boss HP"
    * literally: damage dealt = payments = HP loss). */
-  variant?: "ember" | "boss";
+  variant?: "green" | "boss";
   /** Skips the width transition when the caller already knows the user
    * prefers reduced motion (see useReducedMotion) -- snaps instantly
    * instead of animating. */
@@ -14,7 +14,7 @@ interface ProgressBarProps {
 }
 
 const FILL_CLASSNAME = {
-  ember: "bg-ember-500",
+  green: "bg-green-500",
   boss: "bg-danger-500",
 } as const;
 
@@ -22,7 +22,7 @@ export function ProgressBar({
   pct,
   className = "",
   milestones = [],
-  variant = "ember",
+  variant = "green",
   reduceMotion = false,
 }: ProgressBarProps) {
   const clamped = Math.max(0, Math.min(100, pct));

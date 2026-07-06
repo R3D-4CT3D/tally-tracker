@@ -16,8 +16,8 @@ export default defineConfig({
         name: APP_NAME,
         short_name: APP_NAME,
         description: "Privacy-first household finance tracker",
-        theme_color: "#1c1917",
-        background_color: "#1c1917",
+        theme_color: "#1a1f3c",
+        background_color: "#1a1f3c",
         display: "standalone",
         start_url: "/",
         icons: [

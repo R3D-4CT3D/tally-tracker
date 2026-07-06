@@ -24,7 +24,7 @@ export function MonthSpendingDonut() {
         key: s.categoryId ?? "uncategorized",
         label: category ? `${category.icon} ${category.name}` : t("transactions.uncategorizedOnly"),
         cents: s.cents,
-        color: category?.color ?? color.charcoal[400],
+        color: category?.color ?? color.navy[400],
       };
     })
     .sort((a, b) => b.cents - a.cents);

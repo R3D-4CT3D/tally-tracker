@@ -7,21 +7,21 @@
  * into `bg-surface`, `border-border/10`, `text-text-primary/70`, etc. via
  * the `rgb(var(--x) / <alpha-value>)` pattern -- one class works in both
  * themes without a `dark:` twin at every call site. Values are RGB triplets
- * (no commas) matching frontend/src/design-system/tokens.ts's charcoal/linen
+ * (no commas) matching frontend/src/design-system/tokens.ts's navy/cream
  * ramps -- keep the two in sync if the ramps ever change.
  */
 :root {
-  --color-surface: 250 246 241; /* linen-50 */
-  --color-surface-card: 243 236 227; /* linen-100 */
-  --color-surface-subtle: 250 246 241; /* linen-50 */
-  --color-border: 28 25 23; /* charcoal-950 */
-  --color-text-primary: 28 25 23; /* charcoal-950 */
+  --color-surface: 245 240 232; /* cream-50 */
+  --color-surface-card: 236 227 213; /* cream-100 */
+  --color-surface-subtle: 245 240 232; /* cream-50 */
+  --color-border: 26 31 60; /* navy-950 */
+  --color-text-primary: 26 31 60; /* navy-950 */
 }
 
 .dark {
-  --color-surface: 28 25 23; /* charcoal-950 */
-  --color-surface-card: 36 31 26; /* charcoal-900 */
-  --color-surface-subtle: 54 46 40; /* charcoal-800 */
-  --color-border: 250 246 241; /* linen-50 */
-  --color-text-primary: 250 246 241; /* linen-50 */
+  --color-surface: 26 31 60; /* navy-950 */
+  --color-surface-card: 29 35 68; /* navy-900 */
+  --color-surface-subtle: 34 40 78; /* navy-800 */
+  --color-border: 245 240 232; /* cream-50 */
+  --color-text-primary: 245 240 232; /* cream-50 */
 }

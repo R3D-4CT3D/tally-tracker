@@ -6,10 +6,10 @@ function withOpacity(cssVar: string) {
   return `rgb(var(${cssVar}) / <alpha-value>)`;
 }
 
-// Each ramp keeps its pre-M5 anchor shade as `DEFAULT` too (charcoal-950,
-// linen-50, ember-500) so every not-yet-migrated `bg-ember`/`text-charcoal`/
-// `border-linen` call site across the app keeps resolving exactly as
-// before, while new code can reach for the full `-50`..`-950` scale.
+// Each ramp keeps its anchor shade as `DEFAULT` too (navy-950, cream-50,
+// green-500) so a bare `bg-green`/`text-navy`/`border-cream` call site
+// resolves to the same anchor shade as the explicit `-950`/`-50`/`-500`
+// suffix, while call sites can also reach for the full `-50`..`-950` scale.
 function withDefault<T extends Record<string, string>>(
   ramp: T,
   defaultKey: keyof T,
@@ -26,9 +26,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        charcoal: withDefault(color.charcoal, 950),
-        linen: withDefault(color.linen, 50),
-        ember: withDefault(color.ember, 500),
+        navy: withDefault(color.navy, 950),
+        cream: withDefault(color.cream, 50),
+        green: withDefault(color.green, 500),
         danger: withDefault(color.danger, 500),
         success: withDefault(color.success, 500),
         // Semantic aliases, backed by CSS custom properties in index.css so
