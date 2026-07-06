@@ -17,6 +17,7 @@ export interface Account {
   color: string;
   icon: string;
   archived: boolean;
+  last_four: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -28,6 +29,7 @@ export interface AccountCreateRequest {
   balance_cents: number;
   color: string;
   icon: string;
+  last_four?: string | null;
 }
 
 export interface AccountUpdateRequest {
@@ -37,4 +39,5 @@ export interface AccountUpdateRequest {
   balance_cents?: number;
   color?: string;
   icon?: string;
+  last_four?: string | null;
 }

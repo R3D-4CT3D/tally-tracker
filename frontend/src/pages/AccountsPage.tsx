@@ -29,6 +29,7 @@ interface AccountFormState {
   balanceDollars: string;
   color: string;
   icon: string;
+  lastFour: string;
 }
 
 const EMPTY_FORM: AccountFormState = {
@@ -38,6 +39,7 @@ const EMPTY_FORM: AccountFormState = {
   balanceDollars: "0.00",
   color: "#3B82F6",
   icon: "wallet",
+  lastFour: "",
 };
 
 function toFormState(account: Account): AccountFormState {
@@ -48,6 +50,7 @@ function toFormState(account: Account): AccountFormState {
     balanceDollars: formatCentsAsDollarsInput(account.balance_cents),
     color: account.color,
     icon: account.icon,
+    lastFour: account.last_four ?? "",
   };
 }
 
@@ -93,6 +96,7 @@ export function AccountsPage() {
       balance_cents: parseDollarsToCents(form.balanceDollars),
       color: form.color,
       icon: form.icon,
+      last_four: form.lastFour || null,
     };
     try {
       if (editingId) {
@@ -170,6 +174,17 @@ export function AccountsPage() {
                 onChange={(e) => setForm({ ...form, icon: e.target.value })}
               />
             </div>
+            <FormField
+              label={t("accounts.lastFourLabel")}
+              name="last_four"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="1234"
+              value={form.lastFour}
+              onChange={(e) =>
+                setForm({ ...form, lastFour: e.target.value.replace(/\D/g, "").slice(0, 4) })
+              }
+            />
             <ErrorBanner message={errorMessage(activeMutation.error, t("common.genericError"))} />
             <div className="flex gap-3">
               <PrimaryButton type="submit" disabled={activeMutation.isPending} className="px-4">

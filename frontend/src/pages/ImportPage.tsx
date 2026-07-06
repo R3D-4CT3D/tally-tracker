@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 import { Card } from "../components/Card";
 import { ErrorBanner } from "../components/ErrorBanner";
@@ -28,14 +29,16 @@ import type {
 import { errorMessage } from "../lib/errors";
 import { formatCentsDisplay } from "../lib/money";
 
-type Step = "select" | "mapping" | "preview" | "done";
+type Step = "select" | "mapping" | "confirmAccount" | "preview" | "done";
 
 const EMPTY_MAPPING: ColumnMapping = { date: "", description: "", amount: "" };
+const PREVIEW_ROW_HEIGHT = 40;
 
 export function ImportPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewScrollRef = useRef<HTMLDivElement>(null);
 
   const accounts = useAccounts();
   const categories = useCategories();
@@ -60,16 +63,62 @@ export function ImportPage() {
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null);
   const [rowDecisions, setRowDecisions] = useState<Record<number, boolean>>({});
   const [saveProfileName, setSaveProfileName] = useState("");
+  const [saveProfileChecked, setSaveProfileChecked] = useState(false);
   const [result, setResult] = useState<ImportBatch | null>(null);
 
   const categoryById = new Map((categories.data ?? []).map((c) => [c.id, c]));
 
+  async function runPreview(
+    sessionId: string,
+    columnMapping: ColumnMapping,
+    format: DateFormat,
+    account: string,
+  ) {
+    try {
+      const response = await previewImport.mutateAsync({
+        sessionId,
+        columnMapping,
+        dateFormat: format,
+        accountId: account,
+      });
+      setPreview(response);
+      const decisions: Record<number, boolean> = {};
+      for (const row of response.rows) decisions[row.row_index] = row.will_import;
+      setRowDecisions(decisions);
+      setStep("preview");
+    } catch {
+      // surfaced via previewImport.error below
+    }
+  }
+
   function applyUploadResult(response: ImportUploadResponse) {
     setUploadResult(response);
-    setMapping(response.suggested_mapping ?? EMPTY_MAPPING);
+    const resolvedMapping = response.suggested_mapping ?? EMPTY_MAPPING;
+    setMapping(resolvedMapping);
     setDateFormat(response.date_format_suggestion);
     setDateFormatConfirmed(!response.date_format_ambiguous);
-    setStep("mapping");
+
+    if (response.skip_mapping_step) {
+      // A saved profile or a known bank format already tells us the exact
+      // format -- no reason to still show a pre-filled mapping form.
+      if (response.detected_bank_format) {
+        setSaveProfileName(response.detected_bank_format);
+        setSaveProfileChecked(true);
+      }
+      if (response.suggested_account_id) {
+        setAccountId(response.suggested_account_id);
+        void runPreview(
+          response.import_session_id,
+          resolvedMapping,
+          response.date_format_suggestion,
+          response.suggested_account_id,
+        );
+      } else {
+        setStep("confirmAccount");
+      }
+    } else {
+      setStep("mapping");
+    }
   }
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -102,21 +151,7 @@ export function ImportPage() {
 
   async function handlePreview() {
     if (!uploadResult) return;
-    try {
-      const response = await previewImport.mutateAsync({
-        sessionId: uploadResult.import_session_id,
-        columnMapping: mapping,
-        dateFormat,
-        accountId,
-      });
-      setPreview(response);
-      const decisions: Record<number, boolean> = {};
-      for (const row of response.rows) decisions[row.row_index] = row.will_import;
-      setRowDecisions(decisions);
-      setStep("preview");
-    } catch {
-      // surfaced via previewImport.error below
-    }
+    await runPreview(uploadResult.import_session_id, mapping, dateFormat, accountId);
   }
 
   function toggleRow(rowIndex: number) {
@@ -138,7 +173,7 @@ export function ImportPage() {
         dateFormat,
         accountId,
         overrides,
-        saveProfileName: saveProfileName || undefined,
+        saveProfileName: saveProfileChecked ? saveProfileName || undefined : undefined,
       });
       setResult(batch);
       setStep("done");
@@ -154,11 +189,20 @@ export function ImportPage() {
     setRowDecisions({});
     setResult(null);
     setSaveProfileName("");
+    setSaveProfileChecked(false);
     setPasteText("");
+    setAccountId("");
   }
 
   const mappingComplete = Boolean(mapping.date && mapping.description && mapping.amount);
   const canPreview = mappingComplete && Boolean(accountId) && dateFormatConfirmed;
+
+  const rowVirtualizer = useVirtualizer({
+    count: preview?.rows.length ?? 0,
+    getScrollElement: () => previewScrollRef.current,
+    estimateSize: () => PREVIEW_ROW_HEIGHT,
+    overscan: 12,
+  });
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -179,9 +223,7 @@ export function ImportPage() {
               type="button"
               onClick={() => setSourceMode("csv")}
               className={`rounded-lg px-4 py-2 text-sm font-medium ${
-                sourceMode === "csv"
-                  ? "bg-ember-500 text-charcoal-950"
-                  : "border border-border/20"
+                sourceMode === "csv" ? "bg-green-500 text-navy-950" : "border border-border/20"
               }`}
             >
               {t("imports.uploadCsv")}
@@ -191,7 +233,7 @@ export function ImportPage() {
               onClick={() => setSourceMode("paste")}
               className={`rounded-lg px-4 py-2 text-sm font-medium ${
                 sourceMode === "paste"
-                  ? "bg-ember-500 text-charcoal-950"
+                  ? "bg-green-500 text-navy-950"
                   : "border border-border/20"
               }`}
             >
@@ -252,6 +294,44 @@ export function ImportPage() {
               </PrimaryButton>
             </div>
           )}
+        </Card>
+      ) : null}
+
+      {step === "confirmAccount" && uploadResult ? (
+        <Card size="form" className="flex flex-col gap-4">
+          {uploadResult.detected_bank_format ? (
+            <p className="text-sm text-text-primary/70">
+              {t("imports.detectedFormat", { format: uploadResult.detected_bank_format })}
+            </p>
+          ) : null}
+          <SelectField
+            label={t("transactions.accountLabel")}
+            name="account_id"
+            required
+            value={accountId}
+            onChange={(e) => setAccountId(e.target.value)}
+          >
+            <option value="" disabled>
+              {t("transactions.selectAccount")}
+            </option>
+            {(accounts.data ?? []).map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </SelectField>
+          <ErrorBanner message={errorMessage(previewImport.error, t("common.genericError"))} />
+          <div className="flex gap-3">
+            <PrimaryButton
+              type="button"
+              className="px-4"
+              disabled={!accountId || previewImport.isPending}
+              onClick={handlePreview}
+            >
+              {t("imports.previewButton")}
+            </PrimaryButton>
+            <SecondaryButton onClick={resetWizard}>{t("common.cancel")}</SecondaryButton>
+          </div>
         </Card>
       ) : null}
 
@@ -401,30 +481,55 @@ export function ImportPage() {
             <span>{t("imports.fuzzyDuplicateCount", { count: preview.fuzzy_duplicate_count })}</span>
           </div>
 
-          <div className="max-h-96 overflow-y-auto rounded-lg border border-border/10">
-            <table className="w-full text-sm">
-              <tbody>
-                {preview.rows.map((row) => {
-                  const category = row.category_id ? categoryById.get(row.category_id) : undefined;
+          {/* Grid-based (not a real <table>) so react-virtual can render only
+              the rows in view -- a real <table> needs every <tr> present
+              for column layout, which defeats virtualization. All rows are
+              still shown, just windowed to a scrollable container, per the
+              "no pagination, see everything before committing" requirement. */}
+          <div className="rounded-lg border border-border/10">
+            <div className="grid grid-cols-[2rem_5.5rem_1fr_5.5rem_7rem_8rem] gap-2 border-b border-border/10 px-2 py-2 text-xs font-medium text-text-primary/70">
+              <span />
+              <span>{t("imports.previewDateHeader")}</span>
+              <span>{t("imports.previewDescriptionHeader")}</span>
+              <span className="text-right">{t("imports.previewAmountHeader")}</span>
+              <span>{t("imports.previewCategoryHeader")}</span>
+              <span>{t("imports.previewStatusHeader")}</span>
+            </div>
+            <div ref={previewScrollRef} className="max-h-96 overflow-y-auto">
+              <div
+                style={{ height: rowVirtualizer.getTotalSize(), position: "relative" }}
+              >
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const row = preview.rows[virtualRow.index];
+                  const category = row.category_id
+                    ? categoryById.get(row.category_id)
+                    : undefined;
                   return (
-                    <tr key={row.row_index} className="border-b border-border/10 last:border-0">
-                      <td className="px-2 py-2">
-                        <input
-                          type="checkbox"
-                          checked={rowDecisions[row.row_index] ?? false}
-                          disabled={row.error !== null}
-                          onChange={() => toggleRow(row.row_index)}
-                        />
-                      </td>
-                      <td className="px-2 py-2 text-xs">{row.date ?? "—"}</td>
-                      <td className="px-2 py-2">{row.description ?? "—"}</td>
-                      <td className="px-2 py-2 text-right">
+                    <div
+                      key={row.row_index}
+                      className="absolute left-0 top-0 grid w-full grid-cols-[2rem_5.5rem_1fr_5.5rem_7rem_8rem] items-center gap-2 border-b border-border/10 px-2 text-sm last:border-0"
+                      style={{
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={rowDecisions[row.row_index] ?? false}
+                        disabled={row.error !== null}
+                        onChange={() => toggleRow(row.row_index)}
+                      />
+                      <span className="text-xs">{row.date ?? "—"}</span>
+                      <span className="truncate">
+                        {row.description_display ?? row.description ?? "—"}
+                      </span>
+                      <span className="text-right">
                         {row.amount_cents !== null ? formatCentsDisplay(row.amount_cents) : "—"}
-                      </td>
-                      <td className="px-2 py-2 text-xs">
+                      </span>
+                      <span className="truncate text-xs">
                         {category ? `${category.icon} ${category.name}` : ""}
-                      </td>
-                      <td className="px-2 py-2 text-xs">
+                      </span>
+                      <span className="text-xs">
                         {row.error ? (
                           <span className="text-danger-600 dark:text-danger-400">{row.error}</span>
                         ) : row.duplicate === "exact" ? (
@@ -436,21 +541,31 @@ export function ImportPage() {
                             {t("imports.fuzzyDuplicateBadge")}
                           </span>
                         ) : null}
-                      </td>
-                    </tr>
+                      </span>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
 
-          <FormField
-            label={t("imports.saveProfileLabel")}
-            name="save_profile_name"
-            value={saveProfileName}
-            onChange={(e) => setSaveProfileName(e.target.value)}
-            placeholder={t("imports.saveProfilePlaceholder")}
-          />
+          <label className="flex items-center gap-2 text-sm text-text-primary/70">
+            <input
+              type="checkbox"
+              checked={saveProfileChecked}
+              onChange={(e) => setSaveProfileChecked(e.target.checked)}
+            />
+            {t("imports.saveProfileCheckboxLabel")}
+          </label>
+          {saveProfileChecked ? (
+            <FormField
+              label={t("imports.saveProfileLabel")}
+              name="save_profile_name"
+              value={saveProfileName}
+              onChange={(e) => setSaveProfileName(e.target.value)}
+              placeholder={t("imports.saveProfilePlaceholder")}
+            />
+          ) : null}
 
           <ErrorBanner message={errorMessage(commitImport.error, t("common.genericError"))} />
           <div className="flex gap-3">
@@ -462,7 +577,11 @@ export function ImportPage() {
             >
               {t("imports.commitButton")}
             </PrimaryButton>
-            <SecondaryButton onClick={() => setStep("mapping")}>{t("common.back")}</SecondaryButton>
+            <SecondaryButton
+              onClick={() => setStep(uploadResult?.skip_mapping_step ? "confirmAccount" : "mapping")}
+            >
+              {t("common.back")}
+            </SecondaryButton>
           </div>
         </div>
       ) : null}
@@ -474,6 +593,7 @@ export function ImportPage() {
             {t("imports.commitSummary", {
               imported: result.imported_count,
               skipped: result.skipped_dupes,
+              categorized: result.auto_categorized_count,
             })}
           </p>
           <div className="flex gap-3">
