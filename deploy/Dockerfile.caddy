@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Build context is the repo root (see docker-compose.yml) so this stage can pull
 # in frontend/ and the Caddyfile lives alongside it in deploy/.
-FROM node:20-slim AS frontend-build
+FROM node:25-slim AS frontend-build
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
